@@ -242,7 +242,7 @@ select.lt{border:1px solid var(--line);background:var(--panel);color:var(--ink)}
   </nav>
 
   <section id="s-res" aria-labelledby="hRes">
-    <div class="sec-head"><div><h2 id="hRes">Resumen</h2><p>Estado de cada turbocompresor por tema. Semáforo provisorio: Atención desde el 65 % del valor de alarma o con hallazgo abierto.</p></div>
+    <div class="sec-head"><div><h2 id="hRes">Resumen</h2><p>Estado de cada turbocompresor por tema. Semáforo: Atención desde el 60 % del valor de alarma o con hallazgo abierto.</p></div>
       <div class="legend" id="legSem"></div></div>
     <div class="grid2" id="resCards"></div>
     <div class="panel" style="margin-top:16px"><div class="tbl-wrap"><table class="semtab" id="semTab"></table></div></div>
@@ -260,7 +260,7 @@ select.lt{border:1px solid var(--line);background:var(--panel);color:var(--ink)}
       <div class="seg" id="vibSeg" role="group" aria-label="Planta"><button aria-pressed="true" data-p="TTY">Tratayén</button><button aria-pressed="false" data-p="SQL">Salliqueló</button></div></div>
     <div class="grid2">
       <div class="panel"><div class="ph"><h3>Último relevamiento · % del valor de alarma</h3><span class="cnt" id="vibFecha"></span></div>
-        <div class="legend" style="margin:8px 0"><span><i style="background:var(--s3)"></i>Eje X / sonda A</span><span><i style="background:var(--s4)"></i>Eje Y / sonda B</span><span><span class="dash"></span>Atención 65 %</span><span><span class="solid"></span>Alarma 100 %</span></div>
+        <div class="legend" style="margin:8px 0"><span><i style="background:var(--s3)"></i>Eje X / sonda A</span><span><i style="background:var(--s4)"></i>Eje Y / sonda B</span><span><span class="dash"></span>Atención 60 %</span><span><span class="solid"></span>Alarma 100 %</span></div>
         <div class="chart" id="vibPct"></div></div>
       <div class="panel"><div class="ph"><h3>Lectura del relevamiento</h3></div>
         <div class="kpis" id="vibKpis"></div>
@@ -331,7 +331,7 @@ const SCADA = [
    vars:[ {n:"T5 promedio", u:"°C", tag:"AN_T5_Average_Temperature"},
           {n:"Divergencia T5 (máx − mín)", u:"°C", tag:"div"} ],
    est:{TTY:"ok",SQL:"warn"},
-   hz:{TTY:"Observación: después de la parada del 12/04 cambia el reparto de temperaturas entre termocuplas (TC4–TC7 bajan 19 a 31 °C; TC9–TC17 suben 21 a 44 °C) y el T5 promedio pasa de 701 a 713 °C. Verificar si hubo intervención en combustión o instrumentación.",
+   hz:{TTY:"En la parada del 12/04 se cambiaron los 17 inyectores para limpieza y mantenimiento. Desde entonces cambia el reparto de temperaturas entre termocuplas (TC4–TC7 bajan 19 a 31 °C; TC9–TC17 suben 21 a 44 °C) y el T5 promedio pasa de 701 a 713 °C. La llegada de líquido al gas combustible puede tapar los orificios calibrados de los inyectores y generar diferencias de T5: la divergencia entre termocuplas sirve como indicador temprano.",
        SQL:"Termocupla TC1 con valores anormalmente bajos (prom. 32,7 °C vs 694,2 °C de mediana del resto) en 388 registros, 26/01–22/06. Compatible con lazo abierto o sonda F/S. Verificar lazo de medición."}},
  { id:"lub", c:"Lubricación", t:"Sistema de lubricación", d:"Presión de header, DP de filtro, nivel y temperaturas del aceite. Una lubricación insuficiente daña los cojinetes.",
    vars:[ {n:"Presión header", u:"bar", tag:"AN_Lube_Oil_Header_Press"},
@@ -351,7 +351,7 @@ const SCADA = [
           {n:"DP filtro aire · boost pump", u:"bar", tag:"AN_HPC_Seal_Boost_Pump_Air_Filter_DP"},
           {n:"Flujo suministro aire · boost pump", u:"m³/h", tag:"AN_HPC_Seal_Boost_Pump_Air_Supply_Flow"},
           {n:"Temperatura suministro seal gas", u:"°C", tag:"AN_Seal_Gas_Supply_Temp"} ],
-   est:{TTY:"ok",SQL:"ok"}, hz:{TTY:"Observación: el DP del filtro de seal gas sube de 0,26 bar (prom. enero) a 0,41 bar (abril) y se mantiene en 0,36–0,37 bar en mayo–junio. Seguir la tendencia y confirmar el valor de recambio del filtro.",SQL:"Sin desvíos."}},
+   est:{TTY:"ok",SQL:"ok"}, hz:{TTY:"El DP del filtro de seal gas sube de 0,26 bar (prom. enero) a 0,41 bar (abril) y queda en 0,36–0,37 bar en mayo–junio. Es esperable ante ingreso de líquido al sistema, frecuente en esta planta por la calidad del gas de los productores.",SQL:"Sin desvíos."}},
  { id:"buf", c:"Buffer air", t:"Aire de sello (Buffer Air)", d:"DP del filtro de aire de sello y del buffer air del HPC. Detecta colmatación de filtros.",
    vars:[ {n:"DP filtro buffer air", u:"bar", tag:"AN_Buffer_Air_Fltr_DP"},
           {n:"DP buffer air HPC", u:"bar", tag:"AN_HPC_Buffer_Air_DP"} ],
@@ -375,7 +375,7 @@ const SCADA = [
           {n:"Cojinete 5 · Y", u:"µm", tag:"AN_Eng_Brg_5Y_Vib"},
           {n:"Velocidad caja auxiliar (AGB)", u:"mm/s", tag:"AN_AGB_Vel"},
           {n:"Desplazamiento axial", u:"mm", tag:"AN_Eng_GP_Ax_Disp"} ],
-   est:{TTY:"ok",SQL:"ok"}, hz:{TTY:"Máximos muy por debajo de la alarma del relevamiento (64 µm). Observación: el cojinete 5 · Y marca cerca de 0 µm (prom. 0,55) del 29/01 al 15/02 con la máquina en marcha, compatible con falla de sensor o de lazo; luego vuelve a valores normales.",SQL:"Máximos muy por debajo de la alarma del relevamiento (64 µm). Observación: el cojinete 2 · Y cae a ~1,5 µm del 07/06 al 22/06 con la máquina en marcha, compatible con falla de sensor o de lazo. Coincide con el período en que la termocupla TC1 queda fuera de rango."}},
+   est:{TTY:"ok",SQL:"ok"}, hz:{TTY:"Máximos muy por debajo de la alarma del relevamiento (64 µm).",SQL:"Máximos muy por debajo de la alarma del relevamiento (64 µm)."}},
  { id:"hpc", c:"Compresor HPC", t:"Succión / descarga · Compresor HPC", d:"Presiones y temperaturas de succión y descarga, y vibración radial en succión y descarga del compresor.",
    vars:[ {n:"Presión de succión", u:"bar", tag:"AN_HPC_Suction_Press"},
           {n:"Presión de descarga", u:"bar", tag:"AN_HPC_Discharge_Press"},
@@ -397,8 +397,8 @@ const VIB_PUNTOS = [
  {k:"c5",n:"Cojinete 5",u:"µm",ax:["X","Y"],alarma:64,paro:101},
  {k:"sc",n:"Succión CGN",u:"µm",ax:["X","Y"],alarma:64,paro:76},
  {k:"dc",n:"Descarga CGN",u:"µm",ax:["X","Y"],alarma:76,paro:89},
- {k:"ax",n:"Cojinete axial",u:"",ax:["A","B"],alarma:3,paro:4.5,abs:true},
- {k:"ca",n:"Caja auxiliar",u:"mm/s",ax:["—"],alarma:5.5,paro:7}
+ {k:"ax",n:"Cojinete axial",u:"µm",ax:["A","B"],alarma:3,paro:4.5,abs:true},
+ {k:"ca",n:"Caja auxiliar",u:"µm",ax:["—"],alarma:5.5,paro:7}
 ];
 /* fila: fecha, RPM GG, RPM TP, c1X,c1Y,c2X,c2Y,c3X,c3Y,c4X,c4Y,c5X,c5Y,scX,scY,dcX,dcY,axA,axB,ca */
 const VIB = {
@@ -412,7 +412,7 @@ const VIB = {
   ["2026-03-05",1,0.74,11,11,10,10,15,14,7,7,8,8,12,9,8,8,-0.16,-0.03,2],
   ["2026-03-07",1.008,0.74,11,11,10,10,14,15,7,7,8,8,12,9,8,9,-0.17,-0.03,2.2],
   ["2026-03-11",1,0.74,11,11,9,10,14,14,6,6,8,8,12,9,9,8,-0.17,-0.04,2.1]]},
- SQL:{limites:"tomados de TTY (a confirmar)", filas:[
+ SQL:{limites:"iguales a Tratayén (mismo modelo; sin documentación propia)", filas:[
   ["2026-01-16",1.012,0.89,8,7,11,15,12,11,7,8,11,11,15,13,15,14,-0.12,0.09,2],
   ["2026-01-24",1.008,0.884,6,8,12,17,14,13,9,8,13,13,13,12,14,13,-0.13,0.1,1.8],
   ["2026-01-31",1.016,0.914,7,8,13,16,15,15,7,7,14,13,11,11,16,15,-0.12,0.11,2.42],
@@ -471,11 +471,10 @@ const HALLAZGOS = [
  {f:"2026-08-07",p:"TTY",tema:"Aceite · desgaste",d:"Níquel (Ni) irregular, 2,2 ppm en la última muestra (límite 5 ppm).",acc:"Confirmar continuidad en la próxima extracción.",est:"En curso"},
  {f:"2026-08-10",p:"SQL",tema:"Aceite · desgaste",d:"Pb 1,6 ppm sin antecedentes; picos de Al, Si y K en la muestra del 13/05/2026.",acc:"Confirmar continuidad de Pb, Al y Ni en la próxima extracción.",est:"En curso"},
  {f:"2026-07-20",p:"Ambas",tema:"Aceite · oxidación",d:"RPVOT / RULER / MPC con buen estado de oxidación.",acc:"Repetir ensayos en 6 meses (≈ 4.200 h).",est:"Programado"},
- {f:"2026-08-10",p:"Ambas",tema:"Mejora de proceso",d:"Definir umbral de atención intermedio (60–70 % del límite) para aceite y vibraciones.",acc:"Acordar criterio y aplicarlo al semáforo del tablero.",est:"A definir"},
- {f:"2026-06-30",p:"TTY",tema:"Condición operativa · Seal gas",d:"DP filtro seal gas en aumento: 0,26 bar (ene) → 0,41 bar (abr), 0,37 bar (jun).",acc:"Seguir tendencia y confirmar valor de recambio del filtro.",est:"En curso"},
- {f:"2026-06-30",p:"SQL",tema:"Condición operativa · Vibraciones",d:"Sonda de cojinete 2 · Y con lectura ~1,5 µm del 07/06 al 22/06 (posible falla de sensor/lazo).",acc:"Verificar sonda y lazo junto con la termocupla TC1.",est:"Pendiente"},
- {f:"2026-06-30",p:"TTY",tema:"Condición operativa · T5",d:"Cambio de reparto de temperaturas entre termocuplas y T5 promedio +12 °C después de la parada del 12/04.",acc:"Confirmar si hubo intervención en combustión o instrumentación.",est:"A definir"},
- {f:"2026-03-29",p:"SQL",tema:"Vibraciones · relevamiento",d:"La planilla de SQL no trae filas de Alarma/Paro.",acc:"Confirmar límites (hoy se usan los de TTY).",est:"Pendiente"}
+ {f:"2026-08-10",p:"Ambas",tema:"Mejora de proceso",d:"Definir umbral de atención intermedio (60–70 % del límite) para aceite y vibraciones.",acc:"Adoptado: Atención desde el 60 % del valor de alarma.",est:"Cerrado"},
+ {f:"2026-06-30",p:"TTY",tema:"Condición operativa · Seal gas",d:"DP filtro seal gas en aumento (0,26 → 0,41 bar) por ingreso de líquido; calidad de gas de los productores.",acc:"Reforzar las rutinas de purgado de los sistemas ante la llegada de bolsones de líquido.",est:"En curso"},
+ {f:"2026-04-12",p:"TTY",tema:"Condición operativa · T5",d:"Cambio de reparto de temperaturas entre termocuplas después de la parada del 12/04.",acc:"Explicado: cambio de los 17 inyectores para limpieza y mantenimiento.",est:"Cerrado"},
+ {f:"2026-03-29",p:"SQL",tema:"Vibraciones · relevamiento",d:"La planilla de SQL no trae Alarma/Paro y no hay documentación propia.",acc:"Se adoptan los de Tratayén (mismo modelo de turbocompresor).",est:"Cerrado"},
 ];
 
 </script>
@@ -498,6 +497,7 @@ const ICON = {
   bad: '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.2 4.2l3.6 3.6M7.8 4.2l-3.6 3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
   na: ''
 };
+const UMBRAL = 60; // % del valor de alarma para pasar a Atención
 const ESTXT = { ok: "Normal", warn: "Atención", bad: "Alarma", na: "Sin datos" };
 const pill = (e, txt) => `<span class="pill ${e}">${ICON[e]}${txt || ESTXT[e]}</span>`;
 
@@ -601,12 +601,12 @@ function estSys(s, p){ if (s.id === "t5") return t5Anom(p).length ? "warn" : "ok
 /* ---------- semáforos ---------- */
 function vibEstado(p){ const f = VIB[p].filas, last = f[f.length - 1]; let mx = 0;
   VIB_PUNTOS.forEach((pt, i) => vibCols(i).forEach(c => { mx = Math.max(mx, Math.abs(last[c]) / pt.alarma * 100); }));
-  return {pct: mx, e: mx >= 100 ? "bad" : mx >= 65 ? "warn" : "ok", fecha: D(last[0])}; }
+  return {pct: mx, e: mx >= 100 ? "bad" : mx >= UMBRAL ? "warn" : "ok", fecha: D(last[0])}; }
 function vibCols(i){ let c = 3; for (let j = 0; j < i; j++) c += VIB_PUNTOS[j].ax.length; return VIB_PUNTOS[i].ax.map((_, k) => c + k); }
 function aceEstado(p){ const A = ACEITE[p], last = A.muestras[A.muestras.length - 1][2]; let e = "ok", mx = 0;
   ACEITE_ORDEN.forEach((k, i) => { const pr = ACEITE_PARAMS.find(q => q.k === k), v = last[i];
     if (k === "visc"){ if (v < A.visc[0] || v > A.visc[1]) e = "bad"; return; }
-    const pct = v / pr.max * 100; mx = Math.max(mx, pct); if (pct >= 100) e = "bad"; else if (pct >= 65 && e !== "bad") e = "warn"; });
+    const pct = v / pr.max * 100; mx = Math.max(mx, pct); if (pct >= 100) e = "bad"; else if (pct >= UMBRAL && e !== "bad") e = "warn"; });
   return e; }
 function oxEstado(p){ return OXID.some(o => o.tipo === "min" ? o[p] < o.lim : o[p] > o.lim) ? "bad" : "ok"; }
 const halAbiertos = (p, tema) => HALLAZGOS.filter(h => (h.p === p || h.p === "Ambas") && h.tema.startsWith(tema) && h.est !== "Cerrado" && h.est !== "Programado");
@@ -704,7 +704,7 @@ function renderVib(){
     const hit = el("rect", {x: 0, y: yy - 1, width: W, height: rh + 3, fill: "transparent"}, svg);
     hit.addEventListener("mousemove", () => showTip(host, (m.l + w) * host.clientWidth / W, yy, `<div>${r.pt.n}${r.ax !== "—" ? " · " + r.ax : ""}</div><div>Lectura <b>${fmt(r.v)}</b> ${r.pt.u}</div><div>Alarma <b>${fmt(r.pt.alarma)}</b> · Paro <b>${fmt(r.pt.paro)}</b></div><div><b>${fmtN(r.pct, 0)} %</b> del valor de alarma</div>`));
     hit.addEventListener("mouseleave", hideTip); });
-  el("line", {x1: X(65), x2: X(65), y1: m.t - 2, y2: H - m.b, stroke: "var(--thr)", "stroke-width": 1.5, "stroke-dasharray": "4 3"}, svg);
+  el("line", {x1: X(UMBRAL), x2: X(UMBRAL), y1: m.t - 2, y2: H - m.b, stroke: "var(--thr)", "stroke-width": 1.5, "stroke-dasharray": "4 3"}, svg);
   el("line", {x1: X(100), x2: X(100), y1: m.t - 2, y2: H - m.b, stroke: "var(--thr)", "stroke-width": 1.5}, svg);
   // KPIs
   const top = rows.slice().sort((a, b) => b.pct - a.pct)[0];
@@ -713,7 +713,7 @@ function renderVib(){
     <div class="kpi"><span>Punto más cargado</span><b>${fmtN(top.pct, 0)} %</b><em>${top.pt.n}${top.ax !== "—" ? " " + top.ax : ""} · ${fmt(top.v)} de ${fmt(top.pt.alarma)}</em></div>
     <div class="kpi"><span>RPM GG (relativa)</span><b>${fmt(last[1])}</b><em>rango ${fmt(Math.min(...rpm))}–${fmt(Math.max(...rpm))}</em></div>
     <div class="kpi"><span>Mediciones</span><b>${F.length}</b><em>${fD(D(F[0][0]))} → ${fD(D(last[0]))}</em></div>`;
-  $("#vibNote").innerHTML = `Todos los puntos están por debajo del ${fmtN(Math.ceil(ve.pct / 5) * 5, 0)} % del valor de alarma. Cojinete axial: se evalúa el valor absoluto de cada sonda.` + (vibP === "SQL" ? ` <b>La planilla de Salliqueló no trae Alarma/Paro: se aplican los de Tratayén (mismo modelo) hasta confirmarlos.</b>` : "");
+  $("#vibNote").innerHTML = `Todos los puntos están por debajo del ${fmtN(Math.ceil(ve.pct / 5) * 5, 0)} % del valor de alarma. Cojinete axial: se evalúa el valor absoluto de cada sonda.` + (vibP === "SQL" ? ` Alarma y paro: los de Tratayén (mismo modelo; Salliqueló no tiene documentación propia).` : "");
   // small multiples
   $("#vibSm").innerHTML = VIB_PUNTOS.map((pt, i) => `<div class="panel"><h4>${pt.n}<span>alarma ${fmt(pt.alarma)} · paro ${fmt(pt.paro)} ${pt.u}</span></h4><div class="chart" id="vsm${i}" style="margin-top:6px"></div></div>`).join("");
   VIB_PUNTOS.forEach((pt, i) => { const cs = vibCols(i);
@@ -731,7 +731,7 @@ function renderAceite(){
       const g = pr.grp !== grp ? `<tr class="g"><td colspan="${ms.length + 2}">${pr.grp}</td></tr>` : ""; grp = pr.grp;
       const cells = ms.map(m => { const v = m[2][i];
         if (pr.k === "visc"){ const out = v < A.visc[0] || v > A.visc[1]; return `<td class="h" style="${out ? "background:var(--bad-bg);color:var(--bad)" : ""}">${fmtN(v, 2)}</td>`; }
-        const pct = v / pr.max * 100, bg = pct >= 100 ? "var(--bad-bg)" : pct >= 65 ? "var(--warn-bg)" : v > 0 ? seqColor(pct) : "transparent";
+        const pct = v / pr.max * 100, bg = pct >= 100 ? "var(--bad-bg)" : pct >= UMBRAL ? "var(--warn-bg)" : v > 0 ? seqColor(pct) : "transparent";
         return `<td class="h" style="background:${bg}" title="${fmtN(pct, 0)} % del límite">${v === 0 ? '<span style="color:var(--ink-3)">0</span>' : fmt(v)}</td>`; }).join("");
       return g + `<tr><td class="pn">${pr.n}<small>${pr.u}</small></td>${cells}<td class="n na">${pr.k === "visc" ? A.visc.join("–") : pr.max}</td></tr>`; }).join("");
     return `<div class="panel"><div class="ph"><h3><i class="mark" style="background:${PC[p]}"></i>TC1 ${PLANTAS[p].nombre} · ${A.lub}</h3>${pill(e)}</div>

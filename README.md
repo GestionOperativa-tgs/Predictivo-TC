@@ -19,6 +19,6 @@ python3 build_scada.py 2026-S2 TC_Tratayen_1226.xlsx TC_Salliquelo_1226.xlsx 202
 Subir el `scada_2026-S2.js` generado, agregar su `<script src>` en `index.html` y el período en `PERIODOS`.
 
 ## Criterios
-- Semáforo provisorio: Atención desde el 65 % del valor de alarma o con hallazgo abierto.
+- Semáforo: Atención desde el 60 % del valor de alarma o con hallazgo abierto (constante `UMBRAL`).
 - Termocupla T5 fuera de servicio: lectura < 50 % de la mediana del resto durante 24 h o más en operación.
-- Vibraciones Salliqueló: la planilla no trae Alarma/Paro; se usan los de Tratayén hasta confirmarlos.
+- Relevamiento de vibraciones: todo en µm. Salliqueló usa la Alarma/Paro de Tratayén (mismo modelo; sin documentación propia).
