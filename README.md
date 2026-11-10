@@ -8,9 +8,24 @@ Tablero web (GitHub Pages) del seguimiento predictivo de los turbocompresores TC
 - **Hallazgos y seguimiento.**
 
 ## Archivos
-- `index.html`: el tablero. Hoy trae embebidos vibraciones, aceite y hallazgos (pasan a Google Sheets en la próxima etapa).
+- `index.html`: el tablero. Lee vibraciones, aceite, oxidación y hallazgos del Google Sheets (Apps Script).
+- `embebido.js`: copia de respaldo de la base; se usa si la URL del Apps Script falla o está vacía (lo indica el pie).
+- `Code.gs`: Apps Script que expone el Google Sheets como JSON.
+- `BASE_PREDICTIVO_TC.xlsx`: base para crear el Google Sheets (pestañas VIBRACIONES, LIMITES_VIB, ACEITE, LIMITES_ACEITE, OXIDACION, HALLAZGOS, AYUDA).
 - `scada_<período>.js`: agregados diarios de la condición operativa, uno por período (p. ej. `scada_2026-S1.js`).
 - `build_scada.py`: genera el archivo de un período a partir de los Excel de HistoryView (hoja `Datos`).
+
+## Puesta en marcha del Google Sheets
+1. Subir `BASE_PREDICTIVO_TC.xlsx` a Drive y guardarlo como Hojas de cálculo de Google.
+2. Extensiones > Apps Script: pegar `Code.gs` e implementarlo como aplicación web (Ejecutar como: Yo · Acceso: Cualquier usuario). Copiar la URL `/exec`.
+3. En `index.html`, completar `const FUENTE = { appsScriptUrl: "https://script.google.com/macros/s/.../exec" };`.
+4. GitHub: Settings > Pages > Deploy from branch `main` / root.
+
+## Carga
+- **VIBRACIONES:** una fila por medición y planta (TTY / SQL), todo en µm.
+- **ACEITE:** una fila por muestra; diagnóstico y criticidad al menos en la última de cada planta.
+- **OXIDACION:** una fila por informe RPVOT / RULER / MPC.
+- **HALLAZGOS:** solo lo que requiere acción. El tablero muestra los que no están `Cerrado`.
 
 ## Cargar un período nuevo de SCADA
 ```
