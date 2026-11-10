@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Predictivo de Turbocompresores · GPM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+
+
+/* Layout: encabezado → filtros de sector → resumen → un bloque por grupo (un gráfico por tema, una línea por sector) → planilla consolidada */
+:root{
+  --bg:#f3f5f7; --panel:#ffffff; --ink:#14202c; --ink-2:#4a5866; --ink-3:#7a8794; --line:#dde3e9; --grid:#e9edf1;
+  --brand:#123a5c; --brand-ink:#ffffff;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#6250d6;
+  --ok:#14613a; --ok-bg:#c9ecd7; --bad:#9e2a24; --bad-bg:#f6c9c5; --na-bg:#eef1f4;
+  --g1:#AEC6CF; --g2:#FFDAB9; --g3:#FFD1DC; --g4:#d6e9c6; --g5:#e3dcf5; --k-ink:#2C3E50;
+  --f-disp:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow",Arial,Helvetica,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f151b; --panel:#17202a; --ink:#e8edf2; --ink-2:#b3bfcb; --ink-3:#8593a1; --line:#2a3642; --grid:#222d38;
+  --brand:#0b2740; --brand-ink:#e8edf2;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#9085e9;
+  --ok:#5cc58e; --ok-bg:#163327; --bad:#f08a83; --bad-bg:#3a1d1b; --na-bg:#1f2933; color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+[hidden]{display:none!important}
+header.top{background:var(--brand);color:var(--brand-ink)}
+.wrap{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:center;gap:16px;min-width:0}
+.logo{background:#ffffff;border-radius:8px;padding:8px 12px;display:flex;align-items:center;flex:none}
+.logo img{height:40px;width:auto;display:block}
+@media (max-width:420px){.logo img{height:30px}.logo{padding:6px 9px}}
+header.top .wrap{padding-block:18px 16px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.eyebrow{font:600 12px/1 var(--f-disp);letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+h1{font:700 clamp(24px,4vw,32px)/1.1 var(--f-disp);margin:6px 0 0;text-wrap:balance}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.controls label{font:500 12px var(--f-disp);letter-spacing:.06em;text-transform:uppercase;opacity:.8;display:flex;flex-direction:column;gap:4px}
+select{font:500 14px var(--f-body);padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:inherit}
+select option{color:#14202c;background:#fff}
+main.wrap{padding-block:20px 48px;display:flex;flex-direction:column;gap:28px}
+section>h2,.sec-head h2{font:700 20px/1.2 var(--f-disp);margin:0;letter-spacing:.01em}
+.sec-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:flex-end;justify-content:space-between;margin-bottom:12px}
+.sec-head p{margin:2px 0 0;color:var(--ink-2);font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.panel h3{font:600 16px var(--f-disp);margin:0;letter-spacing:.02em}
+.panel .u{font:500 12px var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-left:6px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+.grid5{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
+@media (max-width:420px){.grid2{grid-template-columns:1fr}}
+/* barra de filtros */
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chips .lbl{margin-right:4px}
+.chip{font:500 13px var(--f-body);display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.chip i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.chip[aria-pressed="false"]{color:var(--ink-3);background:transparent}
+.chip[aria-pressed="false"] i{background:transparent!important;outline:1.5px solid var(--ink-3);outline-offset:-1.5px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel)}
+.seg button{font:500 13px var(--f-body);padding:5px 12px;border:0;background:transparent;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.seg button:focus-visible,select:focus-visible,.btn:focus-visible,.chip:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+/* tarjetas resumen */
+.card{display:flex;flex-direction:column;gap:8px;border-color:transparent;color:var(--k-ink)}
+.card .lbl{color:var(--k-ink);opacity:.78}
+.card h3{font-size:16px}
+.bign{font:500 clamp(22px,2.6vw,27px)/1.1 var(--f-num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.bign small{font:500 13px var(--f-disp);letter-spacing:.04em;margin-left:4px;opacity:.75}
+.csub{display:flex;flex-direction:column;gap:2px;font-size:13px;padding-top:8px;border-top:1px solid rgba(44,62,80,.2)}
+.csub div{display:flex;justify-content:space-between;gap:8px}
+.csub b{font:500 13px var(--f-num)}
+.sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:0}
+.stat{display:inline-flex;align-items:center;gap:6px;font:600 12px var(--f-disp);letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:999px;align-self:flex-start}
+.stat.ok{background:#c9ecd7;color:#14613a}.stat.bad{background:#f6c9c5;color:#9e2a24}
+.stat svg{width:12px;height:12px}
+/* paneles de tema */
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ph .cnt{font:500 11px var(--f-num);color:var(--ink-3)}
+.kpis{display:flex;flex-wrap:wrap;gap:6px 20px;margin:10px 0 8px}
+.kpi{display:flex;flex-direction:column;min-width:0}
+.kpi b{font:500 17px var(--f-num);font-variant-numeric:tabular-nums}
+.kpi em{font:400 12px var(--f-num);font-style:normal;color:var(--ink-2)}
+.kpi span,.lbl{font:500 11px/1.3 var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font-family:var(--f-num);font-size:11px;fill:var(--ink-3)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--panel);font:12px/1.4 var(--f-body);padding:8px 10px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-100%);z-index:2}
+.tip b{font-family:var(--f-num);font-weight:500}
+.zero{position:absolute;left:0;right:0;top:34%;text-align:center;font:600 13px var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--ok);pointer-events:none}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink-2);flex-wrap:wrap;margin-bottom:2px}
+.legend i{display:inline-block;height:3px;width:14px;border-radius:2px;vertical-align:middle;margin-right:5px}
+/* tablas */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font:600 11px/1.25 var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);vertical-align:bottom;white-space:normal}
+th:first-child,td:first-child{text-align:left}
+td.n{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+td.na{color:var(--ink-3)}
+tr.g td{background:var(--na-bg);font:600 12px var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.grp th{border-bottom:0;padding-bottom:0;text-align:center;color:var(--ink-2)}
+th.sep,td.sep{border-left:1px solid var(--line)}
+.btn{font:500 13px var(--f-body);padding:5px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink-2);cursor:pointer}
+.toc{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:-8px}
+.toc a{font:600 12px var(--f-disp);letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--ink-2);padding:5px 11px;border-radius:6px;border:1px solid var(--line);background:var(--panel)}
+.toc a:hover{color:var(--ink);border-color:var(--ink-3)}
+section[id^="g-"]{scroll-margin-top:12px}
+.empty{color:var(--ink-3);font-size:14px;padding:12px 0}
+footer.wrap{padding-block:0 32px;font-size:12px;color:var(--ink-3)}
+footer dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;margin:8px 0}
+footer dt{font-weight:600;color:var(--ink-2)}footer dd{margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{
+  body{background:#fff}.controls,.seg,.btn,.bar,.toc{display:none!important}
+  .panel{break-inside:avoid}
+  header.top,.card{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+/* ===== Predictivo PA ===== */
+:root{--st-ok:#0ca30c;--st-warn:#fab219;--st-bad:#d03b3b;--warn-bg:#fde7b0;--warn-ink:#6b4700;--thr:#14202c}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--warn-bg:#3a2e12;--warn-ink:#f5c95c;--thr:#e8edf2}}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:980px){.grid3{grid-template-columns:1fr}}
+.pill{display:inline-flex;align-items:center;gap:5px;font:600 11px/1 var(--f-disp);letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:999px;white-space:nowrap}
+.pill svg{width:11px;height:11px}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.warn{background:var(--warn-bg);color:var(--warn-ink)}.pill.bad{background:var(--bad-bg);color:var(--bad)}.pill.na{background:var(--na-bg);color:var(--ink-2)}
+/* grilla de estado */
+.sg{border-collapse:separate;border-spacing:2px;width:auto;min-width:100%}
+.sg th,.sg td{border:0;padding:0;text-align:center}
+.sg th{font:600 10px/1.2 var(--f-disp);padding:2px 0 4px;color:var(--ink-3)}
+.sg th.yr{font-size:11px;color:var(--ink-2);text-align:left;padding-left:4px;border-left:2px solid var(--line)}
+.sg td.eq{text-align:left;font:600 13px var(--f-disp);padding-right:10px;white-space:nowrap;color:var(--ink)}
+.sg td.c{width:38px;min-width:34px;height:30px;border-radius:4px;font:600 10px/30px var(--f-disp);letter-spacing:.03em;cursor:default}
+.sg td.c.ok{background:var(--ok-bg);color:var(--ok)}
+.sg td.c.aj{background:var(--ok-bg);color:var(--ok);box-shadow:inset 0 0 0 2px var(--ok)}
+.sg td.c.fs{background:var(--bad-bg);color:var(--bad)}
+.sg td.c.sa{background:var(--warn-bg);color:var(--warn-ink)}
+.sg td.c.nd{background:transparent;color:var(--ink-3);box-shadow:inset 0 0 0 1px var(--line)}
+.sg td.c:hover{outline:2px solid var(--ink);outline-offset:0}
+.sg td.ys{border-left:2px solid var(--line)}
+.legend .bx{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.legend .dash{display:inline-block;width:18px;height:0;border-top:2px dashed var(--thr);vertical-align:middle;margin-right:5px}
+.legend .solid{display:inline-block;width:18px;height:0;border-top:2px solid var(--thr);vertical-align:middle;margin-right:5px}
+.legend .ring{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid var(--ink-2);vertical-align:-1px;margin-right:5px}
+.legend .ringbad{display:inline-block;width:10px;height:10px;border-radius:50%;border:2.5px solid var(--st-bad);vertical-align:-1px;margin-right:5px}
+.obs{white-space:normal;text-align:left;min-width:200px;color:var(--ink-2)}
+#tabHal td{white-space:normal;vertical-align:top}#tabHal .obs{min-width:170px}#tabHal td.n,#tabHal td:last-child{white-space:nowrap}
+.scroll{max-height:440px;overflow:auto}
+.scroll thead th{position:sticky;top:0;background:var(--panel);z-index:1}
+td.l,th.l{text-align:left}
+.note{font-size:13px;color:var(--ink-2);margin:8px 0 0}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:10px}
+.ctrl .lbl{margin-right:2px}
+select.lt{border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+
+/* ===== Predictivo TC ===== */
+.cardp{display:flex;flex-direction:column;gap:10px}
+.cardp .top2{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.cardp h3{font:700 18px var(--f-disp);margin:0}
+.cardp .eqt{font-size:13px;color:var(--ink-2)}
+.kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 16px}
+@media (max-width:1100px){.kv{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kv .kpi b{font-size:20px}
+.mark{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:0;margin-right:6px}
+.semtab td{white-space:normal}
+.semtab td.c{text-align:center;width:150px}
+.semtab a{color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--ink-3)}
+.semtab tr.g td{padding-top:10px}
+.sys{scroll-margin-top:12px}
+.sys .ph{margin-bottom:4px}
+.sys .desc{margin:2px 0 10px;color:var(--ink-2);font-size:13px}
+.db{display:grid;grid-template-columns:minmax(150px,230px) 1fr;gap:0 14px;align-items:center}
+.db .vn{font:600 14px var(--f-disp);letter-spacing:.01em;padding:8px 0 0;grid-row:span 2;align-self:center;border-top:1px solid var(--grid)}
+.un{font:400 12px var(--f-num);color:var(--ink-3);margin-left:4px}
+.db .vn small{display:block;font:400 11px var(--f-num);color:var(--ink-3);letter-spacing:0;margin-top:2px;word-break:break-all}
+.db .tr{position:relative;height:24px}
+.db .tr.first{border-top:1px solid var(--grid);height:30px}
+.db svg{display:block;width:100%;height:100%;overflow:visible}
+.db text{font-family:var(--f-num);font-size:11px;fill:var(--ink-2)}
+@media (max-width:640px){.db{grid-template-columns:1fr}.db .vn{grid-row:auto;border-top:1px solid var(--grid)}.db .tr.first{border-top:0}}
+.hz{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+@media (max-width:820px){.hz{grid-template-columns:1fr}}
+.hz div{border-left:3px solid var(--line);background:var(--na-bg);padding:8px 10px;border-radius:0 6px 6px 0;font-size:13px;color:var(--ink-2)}
+.hz div.warn{border-left-color:var(--st-warn)}
+.hz b{display:block;font:600 12px var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-bottom:2px}
+.banner{display:flex;gap:10px;align-items:flex-start;background:var(--na-bg);border:1px dashed var(--ink-3);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--ink-2)}
+.banner b{color:var(--ink)}
+.sm{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.sm .panel{padding:12px}
+.sm h4{font:600 14px var(--f-disp);margin:0}
+.sm h4 span{display:block;font:400 11px var(--f-num);color:var(--ink-3);margin-top:2px}
+.heat td.h{font:500 13px var(--f-num);text-align:center;min-width:54px}
+.heat th{text-align:center}
+.heat th:first-child{text-align:left}
+.heat td.pn{text-align:left;font:600 13px var(--f-disp)}
+.heat td.pn small{font:400 11px var(--f-num);color:var(--ink-3);margin-left:4px}
+.bul{display:grid;grid-template-columns:minmax(170px,260px) 1fr;gap:4px 14px;align-items:center}
+.bul .vn{font:600 14px var(--f-disp);border-top:1px solid var(--grid);padding-top:8px;grid-row:span 2}
+.bul .vn small{display:block;font:400 12px var(--f-body);color:var(--ink-3)}
+.bul .tr{height:26px}
+.bul .tr.first{border-top:1px solid var(--grid);height:32px}
+.bul svg{display:block;width:100%;height:100%;overflow:visible}
+.bul text{font-family:var(--f-num);font-size:11px;fill:var(--ink-2)}
+@media (max-width:640px){.bul{grid-template-columns:1fr}.bul .vn{grid-row:auto}}
+.chips2{display:flex;flex-wrap:wrap;gap:6px}
+.chips2 a{font:600 12px var(--f-disp);letter-spacing:.04em;text-decoration:none;color:var(--ink-2);padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);display:inline-flex;gap:6px;align-items:center}
+.chips2 a i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.src{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.src .panel h3{font-size:15px}
+.src p{margin:6px 0 0;font-size:13px;color:var(--ink-2)}
+.src .freq{font:500 11px var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+#tabHal td.l:nth-child(2){white-space:nowrap}
+@media (max-width:640px){.semtab td.c{width:auto;padding:6px 2px}.semtab .pill{font-size:10px;padding:3px 6px}}
+.sm2{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px 18px}
+.vc{border-top:1px solid var(--grid);padding-top:8px;min-width:0}
+.vh{display:flex;align-items:baseline;gap:2px}.vh b{font:600 14px var(--f-disp)}
+.vs{display:flex;flex-wrap:wrap;gap:2px 12px;font:400 11.5px var(--f-num);color:var(--ink-2);margin:3px 0 4px}.vs b{font-weight:500;color:var(--ink)}
+.vs .mark{width:8px;height:8px;margin-right:4px}
+.vt{font:400 10.5px var(--f-num);color:var(--ink-3);word-break:break-all}
+:root{--hm-mid:#ecebe8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--hm-mid:#383835}}
+</style></head><body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo"><img alt="tgs" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAATwAAAB4CAYAAABvu07IAABJO0lEQVR42u2deZxcVZn+v+8591ZVd6fDmrAHEAVJBBcQUBkTJJ1EYdyr1XEZHUdxHUYIi6JTXTojkE1xHRz3fbr8uSEKSVgyrihREBIg7FvIRrbequrec97fH/dWL0knZKleQur9WB86sdJV99xznvuuzyPsjhUKhpGwIkDR07CGNaxhDWtYwxrWsL032bW3qYAos+a/BwlfhsYRSh28PVUkEHDfY/HcP0DBNDy9hjWsYSNlwa6BoihzPprFcQWZphNwVRDZ+09XD2EzlDcGwB/ITxNKjZvSsIY1bOwAL7G+g4UMvUS9Dh97qIeHhwMsolHjVjSsYQ0bP4CXmEHEgghSB8BTBRGL1sNdbFjDGtawZwKwhjWsYQ1rAF7DGtawhjUAr2ENa1jDGoDXsIY1rGENwGtYwxrWsAbgNaxhDWsY47YtpWENa9iz0AoFzLRpeSEPlCCfL2lHB3R0oIPf1wEyrZQf0kY2+L0iQ9/fALyGNaxh48WksxOzYgVaLOIZZsypWNzur5QdjEMVi9DZmbfkIU9JYfwBYAPwGtaw/dSj+/Sn8e3tOIDf3fPiI6u4U0Cfr94cIzBJhQNEtUnTmXtRiTHarcoWRTYY9Ckv8niIf7SXzFNzTl6+VqTktpktMCXysoKSdowDAGwAXsMatp9ZZye2BnS33nvKq1XMP1e9f6U15ohsTpI5eVV0B9AkQv974kipVk01o9GGm1e+8LGbV+jdqN6ByO1SlftE7txc8wiLQKfm7QpKWgRlDMCvAXgNa9h+CHaLV7zoeYFhnhhen8saqhVPFKm6bu+H8ijJ9hGtDkE/ESEThObIIJAjjeEsVejrdY6sPrT07hf+1VhujuP4t7NOWXFP+yAPsFPzNk/Jj6bX1wC8EaXeUih0CCtXCuSHeUsJpk5Vih21qEEby7aL6wpAx6DT2KHbHNDGWm4Hdnnb3l5yS+4+9ezA+B83tQRH9XQ5dVHsU+AyIPaZyZOG/o33qEaqcaSD0FBsmJHnNYXyPK+8pa836F5696nLrZXrvefX5067c0UN/Do7sSvyaFHwo8yHp8MM8XcIdChnLcrR6v+CDafhYl8n8gBHmLPEff/N4ks/xPRbLMtmuD28lDHe4Crk2w3koZT3e/Z9VMiXDJSgVPJ7cGhlZM75WK1tbT2AqSuU4u5wJRYM+Wky8G87dOz3yBjuTsWI4JesOPXFgZUlmYw5pNzrnJhnArg9/0gURVRVRazFZLIGY6Cn2/WC/NYY/+O+Pnv9a15yx/oaO2biM44c8O06S8n0QkC29W+Y4AV1BzzX9xVuvPTD+6S3ke80wx7G064NObTnUHx8GGoOwdAKZMFbjI1wvoz4bmJ5mjBYz4Z7N7D8a9GwlPrF/YgUtVAwrJwmlNqHf/DlOzNseXwCMU1YnwHABIqrVsm29uGiXm64sLJTAE3ul+4vXqAq0tGBtL31pJYq2Vuamuxpvb0uFiQYxe+gIupr4JfNGbxCtewf9Z6fqHXfnfn8u/8+0sA3FPDO/ewhxBkhyA5shLgiBFVFszmsX4oNn19XwAtyFlf+NiZzIa6aw+d2z8OLK4KrCOdWnx49YCgY8iuF0qCK1MyrDoDwRYieCfoSRJ4HHI1yIEYyYIaSpqomBKjqK4hsRvVJVFZh/HK8+RO51r/yqwt6+w9qoUOe8fryC5voKk8gmlifdYgrAl0xy4qbR+XBsa1n/KqFR2HdNEROAZ6PcizIZOBA0BZkUEpGiUB6EbYAG0BXozyIkfvA3YfTB1l6+ZbtwXWl7KE3vc/l7W6659S5Lc12fk/P6ILdzsAvzIjJZoSebtcrIj9Xw1de9fw7f1+rJNMB9Qx1hULBUCx62hZ+CGuuwMcxOpznJ4JwGBDWH3O1B9iAqt39jSceY3Jo/E0WX/qJ2i8c0bC1BnTTvzSBTPUccK8HZiDyHIJs8hW8SwANT1ruSvMboillfnLxIsnAi6mlTxTiqkf1XsRfj+iPufGyv/Yf0O1Cs5R+/9wvHoIp/xyR54JWh7+Hu31vBGMiVN/L4otv6d8r9bR83g55cLTNfwHKbKzMRHkJYiZjwzRar61l/5oOk1tKHyySPo99DD6uAo+j3An8HpHfYYI7h3iC+U67+2HzvuHdiaBLHjztAClHt2ez9oRqxavI+JiyUkUF9caKzTUZ+nq8U/iZ4BeeM/WuP9UAO5+nLsWNYFCa5gyCpiOJepLDN5z5kXgQKoi0ILZlj363eghzUO09c1sUrb8HIo4SjtlXHocP34mU34axJ2NyCcD5GKKyG3hADAK2gRMpQxLrqkAMsShUNf2nFhtOxdipxH3/xuyFP8fJAooX3Q5FhgBPoUMoomR7JhPbs7BBkACt1GU3EuSg2jsVuIWV06SuXjIdSkkcp70/5JATzwN5D+pnEuaa+8FK3eA1TR8SKjvaSqjokFKiiIBkMPYEjD0BeCNxJcZFK2lbtATjfoVk/kipvfJsTCOUSnkDJWf6qtPDrH1uCnbjhnA3+S5inUN7u50XI7a52by5p0dff9OKU3+A0SvPPfmu+wbnIetUpfUVfKSod6i3O+nAGQmYVzTW4YsmPDNNvI8t0Ddi4StFT6ndMXvREXj3b3jeS5iblHgPkSYhftKdlDBC73KKVAZ5J0OB0EWKqypistjsW9Dy65i14KuYypUUr1g/4O11pKsgHujFx62oal0QT/G4WBBfra9X12mTHF0RZl/9WjS4BGPPxlhwVYhTgEuqhgxd02dYVxm0poOR28fJmgKICbDBqRh7KnH5Inz1DtoWlhBKFC9+YLfSCOMf8tKrkRnZrCGuxv6ZK7FjB3zeJ8BnRIKmVvvPvd3x65befernqpnez4s8sHVvvT0zKDJKOg6VtPNwuNeIVovNjj93J6/+7zsCLnq+00LRk89b2hZegPo/ETZdjgkmEfU5XOyTWyU2/Xyp23pIjU5flajPIeQIch/DZ3/LzKtfmxxEUW4dct21RKHs0VoO9xIMGKlvCNvuOGf+scxe9AMIf4ENz8ZHSlR2qFdEbL+UQH3WVPrlCWpr6iJP1OcAwWZeTJj5LPBnZi38Fm3zXgGShrcqI6bHPArWnk88IlFOdU5H+BjXCfhErFe0pyt21poDJ7QGxWbfcstNK184q70dJ4LqHqomNthSdlYtLLU7Zi18LlvO+hlB+N+InULU59A4PZSjsn4JoKoqcTnGBCdhw5/SNn8+c67JsqwY7yMHMgGOUskxe97rCM3vsJl/Qr0SVwY9OEblRA56oJCCX9khchBB5t2IvYVZC37KzKun9wNfvtPuYQQypvk7BL3xjlNbMHKU90p9crujA3wiYuNYtbc7dmHGvCSwXH/zyhfO/+XtpzWL4Au37H4fcQPwdlbIedXVrwf9P2zmH4mrDu/8KB7K4dIJAS72qDeETXNRdx1t84+nWPSIseN8TZPwsG3eRUjwE4w9OvWwQMSM6XergZ+6xMtEQ4LsG7DBUmYt/CGzFr4wCcFF90VvbwK0iGqr93WMQYZJSu3OC2WX2oJqHl+5z3vnCJpb7NzWCfHSJStOfXHxHOLOTuzugHhj0mK4xt2ieGbOvxgbXIUQEJfd9nmkMfuGBki8PZttQ3UpbfPeROzXYayMU285BburOwiyBVwMGvlxs6ZDj1fi9UVlj0hAkHsbceU8Zs3/Et7No3j5lpHtBKi/VYPYKIHZCzAjDSNJ/5MugNT65aRW50wSIcOlUdMFS2d0dWAWJim513oYBFQHUhm1AosIRhXt6XGuqcm8zER+8Y13nfrR2af8/ceqGNLv2PDwdtcLQZS2+VcSZheg3uLcODyYJN5eXHbY8DmI+RVW3gCUGW8RS77TUix6Zs2bS9BUSPKeXsfYq9u1NAKQ5k8nEjR9Ahv+jrb5ZwJKYd85O9U48ICXXWgRQfGouuSFB8RakTAU09RsTPMEaydMDGxLa2CbW4zJZkWMFbxHvWrkHH1x7Lti5ze7SJ+OI93gIn06dn6zi7XLOe1T1Ug9aq2QyYppara2pTWwEyYGtqnF2lzOmDAUMQZJoTD5PkkN3vb1OgdyaC5rfnjTihd+UgQvBtVd8PQaHl5/20neUCw62uZdRZi7jLjqwcu4PpgilrjqMfYolC8APmlzGSeZ6Vo1ds68N6DhVSnYybjPnG+7xuqVqC8iO/EFVLeeB9zGyk6B9n3lKnoQ6ZLUTRu0+r4GE6pirEWC0EgQJO2hcaxUKx7nfbdzsp6qXyOwRlXWipE1wHrv/EaM2QK+20jYq+rKDlPNGh974yOvRqNqbJpCG1ScBBYyiM1ZjZrj2LZWvTswQA5RZbJHjjTo4SBHKByB6qGZjAnCjLEiQhwpUeRxTkwc+UhETHOL+czNK144+Zypr/93kaKv9R02AG/nlcMkmT5zweUEmcuIqw7U7BMHUzBJS4+YxGPX8VP0KbY75sw7AW++isHivR+Id/YhU1GMDal0PYUJvgkk87njP/GvALNf9Peem1eeukYMJyHq0sZ1G4ZiwkzyPI+qSjXSbld2j1VFHlD0XlVWifKwzZnHJ4hdd913l3clRKEja7ffflrYles7RK09qhK746tV83yBaYg+X5HnZrIyIZOxoYuVcp+nqcV89NZ7fpZRzX8YSjsFvQbg1Tr9z736LVj7WVyUgh370MGUWk5pnH3ngiFmAZnsYWkV1O6bm0TBBIK4L3DDxx4hn7cUi25fIg1Q5MFsTmaACa0V+no9UeQfrVa5G2S5Cndksrpi86bwideevrx3Z5XfUilvJk1aJ6taTxKA0ziN5cO898TTTuwHnVXLV223N08Dlqf/8sSu+3TGjBlepKinn748Atakr/5fvWrVc7OP9jYfW1X/wqiqZyj6MlROiWMmTjoie8HN965y557MhwuFNM/dALxhDmSp6Ji9aBrKlwYxxgj7ZMFlHD1EikXHzPlvJAhfT1Tx4zxntzPz2NAQl1fRHPw3qFDC7ytbpFTKC5QQ+Ful7DdUqvoH7/UPouaPXvpWtE279+nhQO3WW6fbBNBOA2B114k6bcYMBTTfLj6p7i2rMzjfKp2d08yKSZNkBrCqdZXAck7suk9vvXWZP/HEByrAqvRVUsUsWfmiE6Kqvnz9U9VZovqWpfecesPMk/9+3Y6mMoL9u0gB3HZNFlf9KkHu0HFVjd2X17VU8kz/Vg7Z8HEGcE7YN527lKtQruQXH9tM/ii7QyaXcWjt7cmccm/sf9i7Kf7V+afd8+iOwO3E096mt94KJWZo+zkS7wzQLr7jqZaDzYQJErnWrPiW2AcTbeCbQ29y5cBPEBeEgfHBQOFEnRitZox0OdVKjOkxTra6MOj2cdS1ZkLrVhGpQMLEXNyOAKHTFm6ZFMyYAauW/0jef9omn9DJ33E/cD/wnd/ePXVKX5xtGRzONwBv21aJWfP/nSD3D7hqjEgjxN/7QkXSsJ3deB4mPB1X9ci+CnbqCTKWuPpHbOZHaV5ynxw1O//UuzYBm2oAx4wZcOsMOm6F4jnnpOD2tcHXLoU7uye1GA43kTnOBP54vE4xwtFi5HADh4IeQGBawOQylqwNsmKMoclaEDMkXaspO5B3Du89Lo5UQsqqcZ9a6Wnt69r0+Tu2rhPkCVUe80Ye8moejAMeW07TmvYXSHUwEK4uFEzhlluCGdwK3EoaDj+2zWR1A/AGEupFzzlXnwTmMnzswdt91QkZXzFUPmlvVf8uJAMa1bkFRXU7goAhpAJSP29SRPDeA5/hhgsrtOZt0je2L275grl1Bqbj1hmDAK7YX5X5z7/1HpmV6klGzKkB5gXc1f18EZ0iyqSwOcwFmbCfk1vV471H05fX9Oc4Uieirqogsi0XPKhKbbjNigjGNBkxTWLMwcbaY0QMYiQlG1IqvT2oZ/0/0P342XdsXemRv1W9Lo9h5RUvmbieYtHXrqBwS0dQuAXDDHxRdjz/vH8CXm2VQvNJguxBSa/VqOaYks2gotvzHA05vLLvPUjEc96i51B1r8RH1HH8TlH1GGMxVpBBRXTVQfyCjrRnq0Y+IHvF1RhXfsnLu29kSZrv3bc8VKFUMpCn2C6OIn4ZRUBl/h3l41Tj0zPIWSLdLxXRE63NHpZtakqair3HxXHyiso+rpZ16PZUSTBs0BNG0t7e/iWX4RgCEn9PVdU5PC4JP6ugtTBU025mwQZBMMkG4SRj7UuAd5R7e/BeH/v837beqVZuLUdu2V+zB9xVTD3AVCzD0s6wrOPB/lmVLTpmLjwLaCcuj14TrKZd5SIWE4BY2W4+PiEFrR3epBF0bw7uaFqNPqriXkGQOTBhe5H68FSJEWzWEpcroA+CPg5ma3o6W4HDEDkKmESYs2g/vVSt12w31lAVsYKPelHznxSLPgHzfeXBo4ZpCCKulhM74pdPNj/VG7z4vcdk2k6b2D0jdpyabc4dFARBMqZdreLiqpZ7uvzAxJ1K0uIhZruVS/9iz+6uyDbSGEP/LANxcBxFuCjSGhgKYjOZzJQgzExR+Megtyt6Rdx154y7e264cXP0i1+efcByaRenNcCXoaAXbPdUA7cTfbYRatdQTbu62SN6KNh1uu6E3RaMu5CgKTMq7RKKQzAEGYMYiPsUF6+G+FFE1gLdSajksyAHgRyF6hRsOBETWFwE3vlBo2XjNJxNe9OMnpVQPeEBu9erZ6zgfBUqX8TYH7Jhy70sL/ZuR6l/ePdkKvFzicung3kl6FmYcDLGkK6hG2CA2WnfnSfMWOLe77P00ttHhPh0RLw5DO3iKEryXa/VZg5a+wrg/LVVeRXip92rzTK9OUN3uY+40uejSr9XZRIdH+zQgRPGstuqf0ht8NeIo4qPokriYmLCQ1ubTn+oak7/v/XrLqNzzR9U1n+d/KTvp2G1DPb0hgJe2GRBLTtyeFyFHYLh3pgJBBPu2cFQbwlyEFeCXc7dtc1/AchrUw/EjGgXFECQtfgYXHQbXq/D2v+jt+9efnfFeobXD8mRnXg0LnoRvjoH5NUEuSPRmJR7z4zPtpgUFFROTklIZe/Xz4DSi9F3cuMlPx1esEhg+QUR8GT6WgYsZM5VR+NkBk7fjOi5hE0TkvsQ7+ThoYqxhrj8NM5dPe6ryzWgG+TN8ePVL8WaN8K68xHzAnIteBchWua2pza5szNNnNBkTEXFGNkXa+jJ/vdAi1Fd8XS3/vfqsm6ONJSmlumKTKdzzT+Ssf/K6+iGAU8voKNDKRaB4CtUNm8dUKkaRIXjVYEQMW9HzKGor1eTaxI6uPhOfPRrkOy2LugzmlfFVUKUXz5ThSaRSwSEdxLkmtPcnR2x8NUEST4jjm5C40VEvYtZVoy3V4qryQ2m9O3LimXggfT1E2YvOoK48jaMfIQwdzxxRQdGrceZvfbqVvrkGNTVZw3DjCWqfJcll/yU6bcETP6KDmhQyPbED/3Kce2eGy5/Avg+8H1mfu5k4nI7yNsIwpNAwFV92q5thrShBKEhKn+Jmz7+UDILPA7bUAoFQ0cHiHjA8bOHD8Q1/yPIO/DuHJpbQ+IIqmXo2+rSONLEXu2NGyM+dHRut4/aeDGvEBjIiPDnrlh+8FRFumJNCA7KPR4VZeLB7Wx9+j5E/oPOTlt7GOzegWlbcCc2OLX+qmW9X+TGy/5tFBpzlTnXTMRXb8eEz6vbdQzfzmDw8VpUP8Hiud/cXjthp7KBAgUhP02SMDH1nGYvOgL1/4GxH0jzfCPL6Kgk1+GqF7B47tcGmIp3oPeBKOd/fgrV+K+IPSQdeZO9avo1ocHHb+dlW3+8UzWznamUDRYHmnPNRDR6I8qHMOFLEcBFvn9OxQSCjx7G5c7gpo9sTB5G4yicrRUi2tN16HxyCiZ8J6rvIpM7EWOg0gvqXUoEa7Y9BKLKBVOaOH1CQK/XfYYFocZu1WSFrbHy6w0RSzZW0yLHIC9HvSfbDJW++9jkT+eCo3pr+zMYVsdzsK1bIUyepmy+LQd+ZIocajIJwSL9SLzb9kwCLLX+MB+/HLHPw8c6Iv1hqo4ga3HR3/D8M0vn3jWgidHuBw5s8RmquEVN2bkHHdz2p4AP0jbvNkzwJcS24J2Oj/nUjuSBEvlWVJsRX8/nVI5i0XPateHu7Q9RSrX3p/u71L4V+DZTCz/kyIlvRvRCbHgGKLgoQkyImnnc9NGnKWwYX7m7zk7bH7r+ZPWxqLkAeA+55sMTb663JjqzU0Ftj/CLdVWe12RpkmRBZR8AupxJvLvbtzp+tb7C432+n+Nbt414nTPAwRyZPQjorWm/DAKwoh84YMN4RtMLjsxI+cCqlNod+U5GrIu9f9hbZ2GzEPXVn/ZJ1af5uj/j4zew9LLVTC8ELCu6vbuu2sGtyUNe+m1mXb0BCX+MsS3oOODuLqQYLj6DENRqans/5aCAvIezFv6IP13Q17+eu82SUNvf/Q+PKiv5IXOu+X/48tvBXky2dSrVrcs50H43zffquKm6FkVpb3f89IlDcMGHgA/RNOHwJGTtGtab25HOkRFY3ef45YYq7zwsS68ffzTIWsvgCuRMUqJd1etY8nTEHV1JVsiYBAx1eGEwQCKqUaL1nKbugv1m3KlY9EwvBAgvT/JLdQeIZObSxw/j3VsHgV1cv48oekoI0wsBiy/7FTPnfxAbfntQkXrs960a2VMnfZi7ZnFVJcicTWvcycwvXsDSj64eoJ7K+52kBZ7J66t53RXgm0z/3E+h721o+EdKH+tLQqBxAHidammX5Pt2rn0Xnk/Q1HJSP9BpP1X97nlMRlj2dMTxOcsrDwzocoodDyCX/hwIZKxQ8bCix/HbzRF3bI1xPkFBqXWAq25fc1FFE0bSJzn43o2D37CfAF4h2bzZiceh/mS8Y1BXfr20JpPGL1/9MEsuf7j+YDfos5YVY6YXApZe8j1mzjuLTNOHUobesQc8U41wgUMI68JUJSK4yBNkzsdV/sCs+UVM5of9sooDerK6m16fpl53Dfg2A18dJHKrY81Jhaa9dJ1PnITNXUVgX48yFOhk7wDmf9eWOSzTxPOaLD1+9EGv/6YpWIFMCmYbY+XurTF/2hKzqidO09WJV6e1kqoI2KRTrr/EWqNVzmSh0ns755wTD3po7CeAl58maTjzfCSYWPcQUNUTZi3Vvm+x9PLfMH36SIHdgC0jUdQKPttBbF6NDY5P2JnHKAdd7FAoQmy7gT5EcgPZl72HUeKKw4bHgnwTV/0As+b/N979lFL7lqGEoys09cx094CvFuoOKhKNZUSSgJ2nc+2bMXyZbG4yff1NwXbvswVJuNgbwdefrPBvx+Q4KmvocYqRkQsVdFDDUa3pLzTJpu12ygM9jju6HX/vitlQGSjGG5vQGnuTJuycw1YigmqVsFwlrEbYKEacwwWB6Z18COVs9jfs15MWqicTBBDFdczfqWKsJa5sBk36tpZNHgXvoOjJT7OUrlhP2/zPI/YaiMcwqpWagMImsm4zYg6qY/tSwjycVNUhyJwBnAHx5cxeWCLW/8dNc+8Ykicd8Pz87hc4xrw4kfTVdT51CWFwFYqht6vuLVQ+ze9vqHq+8kSZ9xyZ5cRmS9krsQ6q6u4tuA1Kq1nAihCYJPGxNVYe73Os7HGs7Il5ouzBJSAnVlBjAcE7R6anj1x3D01dPeR6+gjLVYIoxniP9Atl4E0QSvnJtffd33rAbwGSMbP9CfD6CxbyvLoDguIJQktc+QVLL7s/TXa7UR3Ut9UfEXMJNjx6xFptdnV/L/v3Lcxa+BhijkfrLApYu644SjawDU7E2Cvwlbm0Lfgjxvwc5AZu/Nh924Hf+PDcduX5mYDd/z55GbmWq6j0JjPEI9QvWuvmXFPxXPNYmVmHZHjFgQEHB0mhIFbFaS1fxoB8kWz7Swb+WwPJBNwSgBNJcKzbKesrnkfLjgf6PA/3OdZVE5mTxJcXyKTCgFFM05YuWjZtpWVzF7necuLF1VSFjKAiqDGJrHY6cE2myRD1fY/iWVuTey9ufwK8AfV44Si0zsTAgsHH4LUESP886ehcmqYVvPXMWvBrTPB+XKRj5uXVyANYsAIx00eMhLkGfC72uEgRk8VmZiDMIK50MWv+HxH5NcRLufHyFQPgN0xfHuNsBlbE85N1b8HaK1NhcjOgCTZyTyoR6HXKz9dW+O2WiBdPCJjWYjk6K0wIDDkZxKvNdjwoDBCiJOAYafL7tsTK+sizuuJ4ouJZXfGsq3qcH1RwEMAa1BrwnkxXL60bNjFx41ZyPX2Y2KUAZ9DApE/RbchYEgIJb4LAxNXep8qBfGs4Kv79KKTttOijh6bPKqmf1HEguPhJhL8k+aD86HoRK0u1B+rNqHv/mLan1MDe8zt8/KERV8VLCAGS+xBXEm/XmFZMOAuYhaOHWQv/BPwKp7/mJlnVH7bm85apU3Xc9Nklnp3yo0dPQPWLKIKPJeFLGh33vMZj8XTFs7RcYelG4aBQODxjmZRJfp5ohIwRQpN4cJFCrFD1So9XumJlSwybY8+mWNkaK1U3iBRIEhdQ0pdKAnQSxUzYsJkD1m5kwpatBNUYjOCNwYfBAMApO03Pis1I7MtffHz+rNWpM+AH9yXvP4A3fUUTtB6QZEvrVkjzWGtRfy83XrQeuWT0c2jJE0wxehdx1IuR5kHSoYwJeQBuGd6vwwSTR6lHsKYnm0yfxGWfKJlKCyZzLnAuWi4ya8FNiP4YydxA6cKt/V4pMA6AL7mPNlOgacIkere40RZXV4Zqy3pgU1XZVIm4ZxuWlO3RkmGYzgbiW5P+rDrQNqLWYioRBzy1noPWbKCpqxdR8HZbkNsFZ1zVmyBr4qjvntj3fTUd2dx26Jr9QJe2dq2tOdDmdAWlft0oBvAPI/2q9Dr61VHAmzUIa9Pe0zEK14oeCoall60GrsNm2AsWnL3TlBUSpdK44ogrDmMnEmTfgGT+F1/9C7PmfYbZnzuJYtFTLHryeQsFM4ahrPLjJ1+CsXnK3borTcQjeWL8IMwyRjBWMEb6PbMakEna7rzd+9L3MqhA4r0mpy8MMLHjoMfXcNwd93HUqsdo7upFjcEFdlCIult8AurxGlm54tFr3rCZwkAqS689onn/E+LOmRAhU38oUIB1Q0K6sbCt9KG6FRljpcZ8jaBBv0JcKSNWxg6AU89PsKhTorLDRx4TnkjQ/El8/GdmLfo65175Ykoll1S+O+2oe8fT0s8T8080teTQ8SNnWQM/rwNTDTpMH90zvS9JoCUB5cQn13Psnfdx5P2P0dTbhw8M3pp02+gejXOaTJONXfyDhxbM/hmFglE6UEX6Cic8t2tN7t2D3ZP9w1wo6EihQcq2um7F2G3SaEKMEI35sEWp5CgUDDde9ldUv06QMaj6cSFlmVQ6DT72RH2p1xe+F5v5HbMWfZlz5h87UOAYLW9PhXZxdGoGkVcRR8qzSWugNh9mLc0btzDl7/dz9H2P0NzThw8CvDG7w2Y5bCgrQca6qPJwOZxwWf/arSyKCBqLu8LiX5Q8jDH7D+Ale15HjMFirO05q2Xc0EUVO5Je+ND/F3HfQ9jQ9tOujw9LphRqXp/QTJD5EKHcxqx5H+zn9ku8vZGeQU7v2ZPHgz+RuCroswjwwgBbjjj8vkeYctcDtG7uQm3q0e01t6YqYvDqfRX9yOPzz15NvtMoRaSE6yked2ZTzrxLRZ5MAW8/CmmlHIPG9X94CiATAJg8beyCyUpzFmhmPDhTiFLoEH596RrQD6M+TkJb1XEnYC5iUa8JN6I9DJv7CrMX/YRZC45JCS3sqISzNpiCDVvwnvESzu6VV5ck9Whds4Hj7lzFIU+uQwR8f46uLp/kTabJRN599qHPzfo1+U6rnYmq3NrCpAke/YINxUAKePtVDq/aXQXKaca1zgdPjwS26/kZFSuk5KG9ehCqh6I+nRMeay8v9ZAWX3oDPr4MG5iUWFbHo+uPiMU7T1x12PANILfQNu8VCejlR97T8+ZArE31DPfxGmEQYKKYw+99mGPueYRcuYILgyEk4PWgYTOZFluNeq978ICjP0NBDZ3tng6sFPHN0vypCVl7Rl+vU3S/Arz07Dcd3Ad0Dy1S12PhPYg8h+mFIKkKjTLY1FicjZyAqbFRjxMPoZRPQG/JpYuIK/+FzZh0/f043SoGwRKVHTY4ARNex8z551Eqjbynpzw7ZEJDS9PGLYlX99QG1AreyJ4VI3Z85rwJczaO+u5xRv6V4guqFDvQdowUibs/PeX8TCAXVSJV77XHe5OIj69A9x8P74YLKyibUizQOjkGJomS9XnkDjx6iMc1apavdVy+DJuV8VEgGDyf2p4ofi255JNE1SuSvgVrxllOb/u53bjqgIOwwY+YueDckQ9vowrq2We9ujSEPeixpzj27geS6msY1L9GqOqNzZjYx+sqmeBtDy2cvY6CGi0kebtNn5lyvMH8N0hgDQKsrvTax1PO3f0C8AZXvdYOmY+ph0/gvMdkDkb82WPSmlLKe057f4jX88bpgUmpmwqGpXM/i6++FXQNQc6iuPHr7YnFxx6RVqx8n1kLnp9UcOtdve1n3V1PFOk+l79TBWsQ5zn8vkc48oEnMKp1KkpsP7cuxooT+iLx737k6nPvJN9ptSNJUWnhiOaMN99sypijqs5HQSAocvek+fd11aYtzH6iRWvSm/PICIQNibKW828DlVHN4+U7LYhy0Ekvx9iXjrwK296sUartuviy/yXqOxdXvZ4gY7FB4u2NR+ATMbjIYcLDUf0G5xeaB/Q76mQr8rX98hjCpn0qj6cKgcVWKhy94gEOWb0eH6SD/PX37FREUBP4qnMffGjh7N9QKARaave3pnm7bskubM6ZGT0V76TWge+5rdaSsh8VLfI1Job76s52LJgEaOy5zFn4iv5k/ag21/qLsGGYhrPj10OoTTTcfMVKFl98PlHlX/DufsJcCnz4JNQdRwdexOKqMWHTy6m2XpIAdx3TFsUUGvJHPolyP0EmYcPbJ8AuIOzuY8pdDzBx09aRCWFTsMNYTxCaSCsXP/T52d+hs9NSLDqmY88pEm8pTJk7ISsf6K14RzL0YfuqLg4C/zuG9CPtF9YfNtyLi1zKtqH1I2tUjw2yOP8ZpheC9PNGFnimFwJK7Y7Z89+Asf9IXB6v3t3wjckASy/5Fk3mDKLKxbj4PmxoCHIWMTLI6xsHh18trupBLmLONVMppt5qvfKcNUoo9E/YgPFxzc9cic129TDl7gf6m4hH5DmlqogoNrQVV/nEA4tefQ35Tkt7u79lOlaWEW/uOO4tmcDM63PqFQyCZgLBex5siif8HYDOJILYPwCv1JmES656H6qrMba+e0pIktxBbgaZ5ssplRzTbxm5EaV8p2VZMWbm56egsnBQq82+kf9JZhyFfKflFx/bzJK5i9D4TFzlnbjKb4AewpwlCJMpzX7wGyvPTwTvlCA7EVf92Ag8j9NKu/kN5d7aBJSOX7CzZLf2cMzdD5IrV0YmX1cDO0QlzJqKqxQe/Nyrr0ylQr12Ys5ZRtxVnHJuLuDrRkhaGBP/WK0VgFuluLJbCxhJveb9xMNLweCmTzyN8DdMUP/WCMHgIo/JFJi14O0sOycm32nqDkI1bdgzrpmIib+DzRyHi3UfvJeDqNU7LUsv38KSS7/P4rmvwfEyosp/4Kq3g8aETZYgYxIKXHVjEvbWUhfwBmZeNSUB7Tp5efl0L3p+j3f3EGYZl/2KClhLpruXo1c+SLZSwVs7YmGsiFEJs6bqqv/x0OfmfJqCGkp5r50YacdtLhx/RmjND63IhMijMnAGTBSpCuZ6AFYOnMH9py0lAR9Qbh0hgS9BvYAPEPN1Zs5/TzqXqfUZSE+BodTumHPNJA6MO7GZGcRVt0+EsjtvXRkAPhCWXnwXS+Z+hqcnvhzVs6n2FXCV36GumyBnCXM2Ab9azm80Ql8RvFeC7CGIbevXSqnXyGNnp6X9sG6UHxKEMu48PE1IOoNKhaPveTj17OwIeXZeRQwEoSn76mUPLJqdNBZ3oNopRtpxGwvHn5oLfCk0Mrni1NXATsHnApGq8w83e//bweEs+xUfXj9XG0tw5T6Maap7k66IJL/T5rD2G7QtPJHqwUVK7eX+EG732HaFQiFhUS6Jo4Rj1oKX46KvEGRemIDdmKvr1RH4UnLOQsEk19weAbelr0/zqvlTkco5IHNQfxY2cyjGgo/Au0QEXWrSzCOUqRdRkOnAN+pK9roi3Z8u/i69W/+NIDMJF/lxQ/BhBHGOI+59hKbuXnwwYmGsFxMYRXzVRx99aNHsLydEnqiuFCMl3NZPH3tyRvRnYWCm9EXqUqmMgYRrIBBzvRQf3ayKSan99jfG4zRv9PLulfxhwh+w4auIK77+gJGy96tAkL0cnn4VMxcWWXrxrwfpLEi/xzmkqJJnCLFnwtWW7KrpVx1NJvwwwkexQQtxxY2UzgEjRf++q0SbA+8ZBPjtjpsvWQmsBBJmkzA6Gx/NRvkHrDkOk7H4CJzzQ6jg6+vlCSIvIF/IUEpZcuqV10yKF4/zk7XXkm36FL2RHzfenREmP/QEEzduSauxIwJ2ztjQOuipEF/w8KI5P+hnLc5jpYTbWpgyNRB+ngnkOT2ROjMI7DTpszPlqo+9t50AtA+NrPYv1bJ8p6HY7mib/yPg3JHzBNLu5rjiCDJn4OPraZu/BPS7mOAmbrzoqSEiM9tXkxObc00WH52G8EaUtxFkjsRVExGbfQnsUEm0Lmq6F7vMLqz9gD/U8/PccsmjwKPADzjvyoOIg5cTl1+L6qsJMsck3lKUjvrV6T6LCkn68Gh6J04CnkzyeHViS+5ImXd++uCX6NF3kclOoVrxY5qySIsUE1ev55An148s2IU563y8tuz9ux75/JzFSZgvrgZ2XZ8++hSD+WVTIMf1VNWZ7Z0VnwuN7Yn8ba1HHnSbJm3cbv8FvFpYK+ZnxJVPYsNjR1DlS9LqbfL7g1wb6ttw0RpmLVgOeidqV4FbB/Sg4hHNpPKGUzByCj46DeUFBDmDj0iojMSMmfbsnoIdorTNPxOJY4ofX74HwMf23mHBJHrDK5TrP74JuB64njnXTMJVzwd5HyZ8WQJQ9aSZV4BWKhwMPEkBKNbLyxNPhxre9Nx1dK79D8R8ByN+zLJ5qv1FisMefnJABbv+FptsSxBH5XvLvvq2R685/4609aQf7LZ86rgzQ0MpY+WY7qr6YcAuVbBVRPiOXLA80oOwMC4Bz4SjFtYWCobixRuZNe/rGPufI67y1S8tWHaICMYejgnOQ+Q81KXpdq9Js6kYjAWTSWoc3oGPSaiLUg63fcoKBsQz+6ppqNwImZC2RZ9kyR+/QLHo9iCnOfRelgYXdEomSQNcuB74FvnO77Llsfci5kpMcDAursPYVm2CQEOsnzBiPlVBDSs6vs+0D7ye5olvGAt9i/5AxSuTH3qCTLVa/167tO3EZJuDOK4s7g7D9z45b9YTg1pPrLTjuj5z/MyM6A8CI5N7h/fsEu/OivRG7hEXxD9Nw1ndnghxXJhMGqSzuvu5oXyn3eVxn2K6c+Po60SVJ7CBDKLwH9mOfTBorMRlR9TniCOfzr9K/73wUUJKGfW5NCTT5N/ucxxpQn6aML0Q4O1CbPYA0CaCYBGzz7qOmVedkoT1UocqdlrprbHVpAeGxXO/ho9fi/dPY+pJNS/gR+js1Ehqi0VPLvvv9HU/QSZnR50UIvXuJmzYlOTtbN3BzouxkrSdVL56X2vwuifnnfME+U6rpXavBUTacV2FY98aoj8zIpN7I/Wyg5y7B4JARFW+d8AnVj+teawMc67NmPOQeQfqp/Laq1uhQ3YNuGotDJoIddQOzq57ecLNV6wFXYQJZHRnF1PutZrQzFBZAB3m/5d9Nl9aaneEB/wrQXY2ruxQBVf1mMyrMcHvaVvwKWZee0B923dqbS7A+68NWXLp7/H+C9iwvr2XYkZuzxTF06mW1x78GFr9AN7HmFGesRUB5zh49br6t7SrOhNmjRfprXj3kfsXtn2I4jllCmp0arsKqBTxXR3HXRiE8gMRmVBx6s0OUjkKmjFIX8VtsEa+AQhTh3+4mTHnH/ORYoMT6DOzE1rtjjCp6KkMvAqm35PL5+3AphZl5oJzmfO5r9I270W7rEVQ7KgpjH2NqPxXgowdQ1ol2eb1LLBCAnZz5p2A1SLeaUqrnniySXjfSpj9NKbrt7QtfAenXRsOBb69HtBXNh2UpDAsy/EOpG5kGQ4x5RFdwnZxFG4JaD/meuLyJ8g2JSLdo5HQSxlQclt7aN7aW79JClVF1Ztsi41cvKpPOO/BRTOTthNUdKWIFPFamB70fPq4hS1Z+bwqEnn1shOsUkUzoRGPfLf5U488qgVEisM/3IKx14SQJHcl5rPMWnA3pbn3Do49B6p1g/40/XMHknUzQN8NvIbMhJC+zU8CdySJ7F35zIKw5JIeXrVwLsYtTtTd9dkloDKWymUlBGfmEWQmpwBnh4T36pWo7LHhKcD3OKTr/bTN+yLVnuvSvsVBVdk9zPOtWyGUOjyzFk6oz/hdOvWlWsFFXdtv03p7ejMcnWppl/l0rp5C8wEfoa87Bg1G+gmsCC1burDe1St358RYS5CR2FVKm2z4b+sXnLOGvFqK4rWAlSLx1sIRh/YFj36tOSNv6K2oTyutOwW70Ir0VdzTVvRLz5SQ3/WFmzwtYstjlRFIJRlcpNjwebhoKW3zFoEspiprCOOIKAjJRRPAHoG3UxF9GbhXYuzzMAFElVSBSvweUZCX2m+h7eoFhC2XE5fj/a5yPRJzvgmpwTuR4I077heUpIqdVMnBZv4B9f9A1vyFtvnfxlR+RvGTTw1JY0zvsMzAJyJBsq3w8NDKQr6UpgtE0fn/mAKV7t3+leT4iW4hazclf9ehI4d6orRr4qVuWn0RyIG0THwHvV0p6MkI1dUT+ZFcd18dnv+qgDdBzsZx1OO0+skHFrZdU8vdakk8iUcWdxemvMQG5hu5jHlRT9k7BPuMt0vw2VBsb1m+1vwfjz6sBcyOvLtdBbxkQ5XaHW0LutIF0DrnCwQXKSY4ChMsxJXLZHUdaqtkCfFBKyIHEYSJuq93SXLfxR4xisiegVSpPZmHrE4uIhteim06l7jP7XvV0H7lFMbUQy0UDMV2z6sWHoXyWUQVeYbv01/FrnpEBZt5KchLcXIFbfNvwOgviZt+x03yNMuIWbatW1UwFAarpUmyDrWpjZnzP4IN3oKr6F7fVyX18GQ1TbdtGjSnPbITKB0KIjG/1n+lZ42haeI/0dflULUjVsvyniCK2UvFHSdirIRN1sXV31etfOzhBW1/AZVEOzbJ11FEuzqOfVsQyBeyVg7tKXsnuzAQoOAzVkx32T8pXr+Q7jatg4eX9lLBxgHGYKHuoKfOEztFTA5jptSc60SF3CeHoiaJlPSj7a38n0JRWEaZWV9+D3HfLQSZE5LDtw/Np6oqxkji3Pix78s38VUEzUenfYN219t3JGmqBrD2SEz4L/joX7DVR5m14DZEf4/nDpx5kEOOWU+pvQpFP4B/6Q9nX3kQufAliLwHI29P1kS1Lt6KWKB6fz/NVbHoR0VetFAwvEYqXLPqXzjS9NHU+l7KXR6vMiIsycqe61AkxRU1mSbr4moljsvzt5Q3X73+K+3dSQQgXlciUsI9XDg2N9maz4SGuSqwox47diihIRJ5d2VL4bE1Og0r2/Td7RngFTqEIorIUyPsQJjUgdQ00T0YcKX/UNT5WZaGYY8z++p2nLkemzkcV903PD1Vjw0NPn4a1CFmcn0bbXfHuyt6Zs5/IzZ4ezK2twcPjZrH52Ptbwo3wbGY8FjUt6MRWL+eLY8+Qdv8dYhsAi2n26QZmIRwHCLHYzLgKoN0A+vCfQiwfNTp/JPRM0Gkgur7+Mna9WRylxNXwTsHdd6rRohrkorsVkePExtYCTISx5Xfx+IvfXDRnD8ke0SNdoinA5Ei7ulPHzMtC19uzsr03qr33iFmF5vqveJbssb0Vd1tzS3+m1rA9LPO7DXg1W6s6kOjROKwTcVyhPdVTYqvdNlfaZv3ZlR+QpA5PGUiseMY7Bw2Y1G3ETX/BP6TBOFkIv/MoeTuWfzMYNehTG89FMM8RATPXn6HNMcH4J1PKLDSh56xkxA7KdGRl+1V5NQnDdtxJSVXqAvYKWIMrhIDf2CshOQT0AP4OJ1rHiEIFpLJtFDtqx/opT141aYcsHnXK9dgTabZxnG0NvbVeQ9G8Zf54msqg4b/JR3k1+5PH/vuQOTqbGgm1/J1RnbZ+VRrIIp95JSPy8VP9A3mvNu5R7V7K3EPLmLfGm3aDSbefN6y5NLfo+58fPwQQc6mh13HJdgFGYt363HRG1ly0WKE1ro2h0p/zrn8zA9EUbL+MwTZE3BRvcf1zKC+xGRUzEW+v0F78CuuOnzs+4lZ6xfiKSZQ0Luodt85kAMeE9ADVUP74dfiKq+mWr6Xpol2AO3rY70HTEDlGVpSVD2omjBnVYyL4vJ3ujL+lQ8uaFtUAztF0IKIlHAbPnH0UT2fOfY7ucB8yxiZ3FNJ8nWye3jsmzLGRDHXthYevaUzn2ha7NpG2hXrF6Yp34v3m8aninydQI9Oy+K5y6m6WbhoGUEuIeofPyIzCsQEOYuLHiSuns/Sy5Yx55qJiceudZ6D9SD07NS7K7U7Zi6YDcH70vynjHzzdg0Et31hR6a/NM2Tqv6MZcVyKs6tY+bpSdqcnD/qtxidTrnrO4RZQ5hNRZH24nxKQh/ce2Ar5ZYmxOtwm9CheJPJGWxGqnHlpqowe9WiWe9efVXbKvKdVlVFpyW9dVLEdxWn5FubglubM/Zd5Ui1EqvKbj6UErAT21f293jNFFWRFVN3/T6Y3aLkXhI/Cvp3TKCoPPsAD4A0vL3l0gd5estriPuuQQLFhibx9sYQ6GugG+QCXPVmVNu4+fI/UygY+qIMqhPqkpsfSFsL3oMJunbMglJUZl51AMIijLXp8jzLehlVMdYQlTeCfD9xAqaO/f5vl6RP701HrOPNh7+bavXtRNVHaJ5ok1G6PWeGFu/xmZCNRxyaFC+SVhVNQldVG+YsYWiiuPqHSF37/RNnzXpo0ayb0KQC20k7IqIJWedzpvQVj/1ONrCd1spz0yqsmN1MeSioMRA7jQT/0YnFVRtoxxSLu+6MmN1jDC56VBYnT3B9lgJezdMrGJYXe1l8yb9D9EZ8vJIgGyTeLfGozN8Oaa9Uhw0NYpS4bxGVreex5JKHef/7Q4pFjwkPQOSgtCIp9YtpfUTE1qGe/qBiFigmKBBkpiaFnmdhukPx2IwA32TJJQ+Tz9tRqc7uKuipCqpC++E/JOo5i3Lv5xDTQ1OrBZMA3256fJqOlm0+/BDdesAEb6LYiQ3EZJosYiWKKsuqPnrrqolbznlg0awSRfH5fKfVjg5RirSXcFqYmukpHvuhnPV/yuXsu6pOtRzveB52F3aja8oYU435r6bCYzfVmFR253fsev9a/2aPf0bExzGmpe6MwYw3wlAV6BBuvPQXnH3l/9HkL0T4MEHToQNEk6ojyLLrU4k6SxBa4upK1F/Okkuu6+9B27QyOXhhPAWRifW7J7WpAunFxZuGmSqQfq465diE4aWuFdHxYkkVPOp7HGMXgQqlJM5n/EhJJvchmcpYC1xE5+ofUNW5GHkT2daQci+oc0mlmR23sqimzD1pmBgGdu0pJ0vu7gcJujZvrrrqbxDzrQcmnntTjeMwn++0nVNXKNPakfbEEegqTjm3Yno+1RzY6ZFX0sKEkT1MNyjELVkJusvul6163H9p4RFDcfedjmC3yuKFgqF4+T3MWvArbOatSZ/Vs4VifIfiP5pUcD++Cehg9ue+jSt/ANV3EGSPShlOwKtLo8A9nYvV5H+i/SBqwoQuKipvxLuvImYRSy7ZmMwLdyiIh06bEIf6aZicDFQm63DtYgT1m2mesJHtpwq0/zpF3ke0tYsg+894Dz7eR5u3d8z3i8pl3HjRU+T/aJMIYDxmY1Jvr1QytB+5HHgbnU+eTaX3g6i+nqaJzcRViCpJsUHSSZRaRKAYjBWCQAgyyZWXe3qrAcvXTZrwiyM2rr7ugc+/cdWAvn2nzVNKaIVT8OkqPOcFgXVzEXl7NjBBb+Rdeir2eD94xU3IStBb9nfh7fukuCzWQuK6jhzgDZXp/Dxx9Q2ICeHZ7OUNDnFTzrVS+yPA5cxedA1x+bWIfTPqX06Qa06SvXGaOvG6faFDdty5LpKochkr/ToNLn4QH3di9RvccOmDQ4kzi9t43pw5MARTHwcvlVN4itPXbuH6YacKkj8vvngj8G5mLfw9yGcJc4cSV3z6VfblEDcmaAqIe77C0kt/1D82N66f0ZLk2VQNHUC7/A74HZ1rTqFvyztAXg/yXHItBjuInEY9RFWIKhUi9wRR9Q68/h9GbuVNh/99C7BlG9bpzlK7r4HO5s+e8Nyscx8S9D3ZjD2wr+Lpjrw37F4Fdjiwa86IrUT6RFn82w4pPrrumcbHnilJwx41mLbN/xph0/sScsoxfJorjjBrcZUruHHuZ0d+UxZMMhw/6CnfNv8FINMReSXqXwIcgw2zif6tDBop1IFll20A0EWgvgfVBxD5I3AjTfZWfvGxzenj1Cb6ukNAJ8mhnXflQUThckxwfNqSYerS9hI2WaLeTpZc+pb0d/odV3M7BIqemVedjAnmY8PzUA8uHmFhnZEGu77fkGl9M79aXU69at3H6i2Gjo4BtujvbZhIrvJCsM9H/BGoyYFUMf5pnDyBxI+gzQ/RfvAWtp2RrumsDLItheNPzFi9QIR3ZTPm0ErVE3tq4ete3fMa2MWxX1uOef0BxUf/tCd5uzowHqsQzv8P4vK52MxzRqDvanzn9kqDWHZL7Y4ll9wN3A18mTmFibiW5+DdCWh8Al6OBjcZMRNAcyAW1QihD9gKsh78Y6g8iMj9HNj9EKXigDhMPm8pTVVKRbfd/qlxzlWCcwiC40eGrt7en36WUGrfhdD/8nuA85mz8L2oXEHYdDwunQZIJi9k3FdkFU/YHODKS0Dewa8u6E0bfve9Qp3UtERSj09kK/Db9LWzZRBKGFagFMUPdiIUhIVH5/p67FXG6EeyoTF9FU9PxcWoWKlDSsUrbkLG2Mj7J8ue/AHFR/9UY0Dem98b7NGISwFDsbiGtvnvQ/11GNOM92MHeoqv+5M38WR1x71Ww8kK5j03yFbgjvS1559d+30lcTsvJKkgC96bNNnXla7e4GPA371boX8tArjh4m/wqoU3QPljKO8jzE1MgM+PX49P1WGMJchYot4fYDMf4sYLt0LB9APHPvuclmTmuJbj61fIKw1Vy1uB0oH2h8Y76kc/5omq3DflF95xXK/3r27OSliNJIi8ek1SOUb2YNJG0yhiQs7YvrK7qxzZtx/8nw/d1Znfe7Dbu36pfD5J3rbNewcm/CYQjkGy2qPEZFsyVHs6WDy3WPeQNrnO3RF6HpAW7JdbHDYUEigI+ZXSv+FKKxR2BrLD0DDNXHAu1tyAelvHObw0L+vLGD2TGy79+24Pyg++DzMXnoLRC4G3EGQn4KLa/Kek42cy5m0nAtiswUddePcZllwyf4BQtrhvg90I29bCca+0Vv9FhPOaQnMoIkSxUnXJmM6gtHJSIR5mQrmWNW4KksRxNdYfxM5c1Fp8aF1nHttewtWr0Yq9B72r3ozJXou1BxNV3MCg/whtT00XyFqLCcBVHsDF72Tp5X+qG4PF7KtPIux9nF8Vewcd4Hoo3O+9toJqAhPTv50l8/QygvAM4qieFXOPCQwuXkm266XJGvQz5uxe6qPQIf3341XzTiUI3guaJwiPQAFXTTwrRJA6SiruaugqGGwmIQXw8WKMfpIbLvnLQC+jaAPSdrCCBQwdaG2Gta9w7HGEzPFOzkM4PTRyeBhI/4ii9+AU/KCWQEGwBqxNNOz7Yn9X5LjywI5Hf1T7jD0tUNQf8AaD3qwFp4F8Hps5G3Xg4poATR3oy1UH2jXEYlNVL1d5BOF/iKvXctMnnt5rMKldy+z5MyD4Beruwes8Djr2F/3eyl4pbdVp3KuWO2yb/zmC3L/XrxVlcMEiZ4kq32XJ3H/eay+nUDBJUTn9HectPIoqbwL/FsScQZANkoH/KAl5+8fH6gqA6YMyPW3GWmwILgZ1f0L1GpZ0dyYyA/nx23oyXoEPGAxMPYVjjlRjXmiUF6mRacBxoJNQaQVyiFpVVEQqiG5S5W4j+rMtmys/P2Lh2p4aGdeuEAKMLuANDl+mF3JkJ/wrykexmRMxZkBqcAhvnciwn64M7Umr8eSJSfrRxCQMGMqfUf0h5er/8rsr1tcv9OjXUP05mabX4VLeAO+WofJlqluvY1mxPLRqNYqVu1SFHYC2eZdiM1fjYwd17oVUPEHGEFffw5K5365bmqBQMKwcVOHOd1o2P3o6xrwa9bNBTsFmW5IBD0+/pmx/e4/UnIJnmCYRTeUUdQitvAlSQhEFX92Iys2I+z4Tj/tNwq23h3q5DRsAvmkIefy2QKUFzKam57Rm4rg5tjTlosCqGO9DKs19bJXiA1v739uJpR0vIzCrLHXnQwOYXjiQ7MTXgL4B1TMROYYgm7JvJ2H9wF7U7VmhpPZgT/vaXLwVuBdkCcZcz8Sj/lx3j6ufz+3q07HBb1HJoC5pALbZRHHeu9tRvo2r/CRRPdu2ZD8i4JfkBGsFo+mFgOyEIib4BF49uDqHgaqIFdRtxsWncdPHH6p/Hqsmoj0IRBPwOxnVl2HMK0Bfgspx2KAVEwyiftIBUthhz8Pg/WNqM6CJLjA8jsjtqCzFBku54cIHt3lo+3HJjLPvdWoLBYSVCHlgRaJCtqdgOT4Bb9twi/4etcnA80FOAT0JZAqih4EcgNI8SJBEQSqg3Yg8jfIk6EPA3YjczQFT7t/ugNQ1tEwPddv8/yFs+tch/YX9Se0wISD10eN4/QVoCZu5jRsurAwBzlsxTF6plKZq2ru1qzzZ0r8U+fakkjb4ms+d/1Ks/Cc2MwtXTb3gOue8VF3CxFK5jsUXv66/v26k9l+twLOtB3nWwiYm6rF4TsToyaicgOixKIchchBoMyqZIaF8EkVUEOkGTfaQyEMIK3FyN4ZVaZP0tj2VDaAbDRBUoGMYzBmUB2QUiDZHLs80TKNi/0Y7/8gc1e4ccTkEIDPBAxVaN5aH9KEN3/yodd2gtRaUWQtPAP0LYg5gQCB7W7aStFgSQlwGWA7ya4wuJuPu5JeXde00gb8jltwdXVe+07LlsTOBf0HkrZiwJaFgGrHqpsdmDL7yLm685HujOF0wAH473DfAnI9miU6cgC9PIBPkhih4xT7C0keT7WLz5m6WFeMdtvzs7DMa9qw1GZ0ke+qt7HrYN0xrR51BbthwdsFnyeQ+vgvTIz5VwEoS32IT8FO9F1iO6O1gVmD8Q2R0Hb+8tHuXPdF8Z4Ytjx2GmpPBvRxMG/gzCXM27WMbOb0NxWMDwVUfw8enJYWgPanO1hkAd97es2t7jxLDTKo0rAF4o/nZuqOvpKOuxdA2fzLCXzHBkbg0d7fLTc8p+JkATDBAMe7dVoQ1qKxFdAPIRpQukJ4kI58WZfAtKAcichjKEYhOQeyh2DDJP9VaN0a6YbdWnY0r/8niuZ8ap9XKdN90SL9a2WAr1kgORnkfNWyfsGCsw/oxt5Urky9h9B3YpqN2S2lrsNoWJK04LhqsvTARMRMRcyK75JSl6mzepcPcZZfO3ZoRb+jWtPcuKm8g5OvjhuRyx/tGdywHW2yc7IaNOw9v/Fz/a6+eQJ/9EzaYWt95VE2FoAe12ewSffloNuBuQxYQlxPvrtGe0bBnoZn9+urznYk6fTV4HUE4tf7D9yKp9KQdXn9hWE0GMwZg57GhJS4/iKl8IaFubxyOhjU8vGfftZ92bcDBW28lyL48kWV8NhOa7oRiywaGOHorSy/p3Cd43xrWsIaHt1tjZIl3d3DvTIx9Ga6q+yfY1QoV1W+y9JJOCmoaYNewBuA926zUmSixqfsgJpBEX3N/BLusJer7Ky3h3DSUbVQ2G9YAvGeZd2eTmdnPnYGR2Yl3J2a/AzubsbjocdS9I2FW7pBGn1rDGoD3rPPu0nYLjT9AkM2k3p3sd2Cn8Vpi9xaWXn4PhQbvW8MagPfss9rBnrnwFIy8MaFWEtnvcnbePYr3r+OmS/9IvtM2WlAa1gC8Z7OJOwITTMSGidJOMnj+7A3nkjlgnwjzVP6C87NYcsltFAqNIkXDGm0p+4XNmjcHzCWIeRUmTEe4/L6qsrVzZt8E2EHj/6HcdSnLipsb9OUNawDe/mgzF74G8R9EZDZBLkw0YZ3vF8TeJ8EvBTpjE4ZoV34Ar59iySU/bhBdNqwBeOyXkxZ2G+6+MzHyDpDXYcJjUu67lHY81U8f12kAVVQ8KJggpTCvPo3X/8GWF3HDFesbWg0NawDe/r4G+bwZQgL5mnmHE5vXAG9CeAUmewCQUtW7hBpqYOZ1LNdRB2k1gJiUrkogrj4F/AhXuZabPrFqWIBvWMMagLcfr0WhIEM0FwDOXXAixrdhZA4qL8UEhw2hgBqquTBIb6GuQJiSD2yj1SBiE60Pm4JcpYzq7WBKVKOfsuzyJwbEiRpccA1rWAPwdk5VP5T6e841R+MqL0XMP6ByJqInIeaQREUtpXbqf+kAV97wyy7Dg1o/74CiKWuKIKmYEf0vBOIKoKtJRL9vwXETN3Xd2V+IyOctU6c2mH0b1rAG4O2u5sK2+hkqtC04DjEngX8hqtPAPA84GjgYkeYkvDTDYJru+HZsi4UDZKJ9wEZEHgfuA70LzF8RuZcbL3qK7XKTK7RRgW1YwxqAx16rbQHD58JUaFswCTWHYfRwkCPAH4HqJJQDMTIRlWaELGiIEiaeHFXAIfShvg+lC2EzIutRWQtmNdasocpabt60fnsgG6Ihog2m34Y1rAF4I7B2BekHwNEUhakJ0TR0GhrWsAbgjbnewnbqZKWELn1Ab0GfUath5UpJxGdgGxEbGh5cwxq2Z/b/ASv6jzLX/FQxAAAAAElFTkSuQmCC"></div>
+      <div>
+        <div class="eyebrow">O&amp;M GPM · Energía Argentina · Mantenimiento Predictivo</div>
+        <h1>Predictivo de Turbocompresores</h1>
+      </div>
+    </div>
+    <div class="controls" style="flex-direction:column;align-items:flex-end;gap:2px">
+      <span class="eyebrow">TC1 Solar Mars 100 · PC Tratayén y PC Salliqueló</span>
+      <span style="font:600 18px var(--f-disp)">Prototipo de formato</span>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+  <nav class="toc" aria-label="Secciones" style="margin-top:0">
+    <a href="#s-res">Resumen</a><a href="#s-op">Condición operativa</a><a href="#s-vib">Vibraciones</a><a href="#s-ace">Análisis de aceite</a><a href="#s-hal">Hallazgos</a><a href="#s-src">Fuentes</a>
+  </nav>
+
+  <section id="s-res" aria-labelledby="hRes">
+    <div class="sec-head"><div><h2 id="hRes">Resumen</h2><p>Estado de cada turbocompresor por tema. Semáforo provisorio: Atención desde el 65 % del valor de alarma o con hallazgo abierto.</p></div>
+      <div class="legend" id="legSem"></div></div>
+    <div class="grid2" id="resCards"></div>
+    <div class="panel" style="margin-top:16px"><div class="tbl-wrap"><table class="semtab" id="semTab"></table></div></div>
+  </section>
+
+  <section id="s-op" aria-labelledby="hOp">
+    <div class="sec-head"><div><h2 id="hOp">Condición operativa · SCADA</h2><p id="opSub"></p></div>
+      <div class="legend"><span><i style="background:var(--s1)"></i>Tratayén</span><span><i style="background:var(--s2)"></i>Salliqueló</span><span>línea = promedio diario · banda = mín–máx diario · valores = promedio (mín–máx) del período</span></div></div>
+    <div class="chips2" id="sysNav" style="margin-bottom:12px"></div>
+    <div id="sysWrap" style="display:flex;flex-direction:column;gap:16px"></div>
+  </section>
+
+  <section id="s-vib" aria-labelledby="hVib">
+    <div class="sec-head"><div><h2 id="hVib">Relevamiento de vibraciones</h2><p id="vibSub">Medición periódica con equipo portátil, planilla VIBR TTCC.</p></div>
+      <div class="seg" id="vibSeg" role="group" aria-label="Planta"><button aria-pressed="true" data-p="TTY">Tratayén</button><button aria-pressed="false" data-p="SQL">Salliqueló</button></div></div>
+    <div class="grid2">
+      <div class="panel"><div class="ph"><h3>Último relevamiento · % del valor de alarma</h3><span class="cnt" id="vibFecha"></span></div>
+        <div class="legend" style="margin:8px 0"><span><i style="background:var(--s3)"></i>Eje X / sonda A</span><span><i style="background:var(--s4)"></i>Eje Y / sonda B</span><span><span class="dash"></span>Atención 65 %</span><span><span class="solid"></span>Alarma 100 %</span></div>
+        <div class="chart" id="vibPct"></div></div>
+      <div class="panel"><div class="ph"><h3>Lectura del relevamiento</h3></div>
+        <div class="kpis" id="vibKpis"></div>
+        <p class="note" id="vibNote"></p></div>
+    </div>
+    <div class="ph" style="margin:16px 0 8px"><h3 style="font:600 16px var(--f-disp);margin:0">Tendencia por punto de medición</h3><span class="cnt">escala ajustada a los datos · alarma y paro en el encabezado</span></div>
+    <div class="sm" id="vibSm"></div>
+  </section>
+
+  <section id="s-ace" aria-labelledby="hAce">
+    <div class="sec-head"><div><h2 id="hAce">Análisis de aceite</h2><p>Laboratorio YPF AUCTOR · últimas 6 muestras por equipo, contra los valores de alarma (Mín/Máx) de cada lubricante.</p></div></div>
+    <div id="aceCards" style="display:flex;flex-direction:column;gap:16px"></div>
+    <div class="grid2" style="margin-top:16px">
+      <div class="panel"><div class="ph"><h3>Viscosidad a 40 °C</h3><span class="cnt">banda = rango de alarma del lubricante</span></div><div class="grid2" style="gap:10px;margin-top:8px"><div><div class="lbl">Tratayén · EP 32</div><div class="chart" id="viscTTY"></div></div><div><div class="lbl">Salliqueló · EP 46</div><div class="chart" id="viscSQL"></div></div></div></div>
+      <div class="panel"><div class="ph"><h3>Parámetros a vigilar</h3><span class="cnt">ppm · ambas plantas</span></div>
+        <div class="legend" style="margin:8px 0"><span><i style="background:var(--s1)"></i>Tratayén</span><span><i style="background:var(--s2)"></i>Salliqueló</span></div>
+        <div class="grid2" style="gap:10px"><div><div class="lbl">Sodio (Na) · límite 30</div><div class="chart" id="naChart"></div></div><div><div class="lbl">Níquel (Ni) · límite 5</div><div class="chart" id="niChart"></div></div></div></div>
+    </div>
+    <div class="panel" style="margin-top:16px"><div class="ph"><h3>Ensayos complementarios de oxidación</h3><span class="cnt">RPVOT · RULER · MPC</span></div>
+      <div class="legend" style="margin:8px 0"><span><i class="mark" style="background:var(--s1)"></i>Tratayén</span><span><i class="mark" style="background:var(--s2)"></i>Salliqueló</span><span><span class="solid"></span>Límite de alarma</span><span>zona sombreada = fuera de límite</span></div>
+      <div class="bul" id="oxBul"></div>
+      <p class="note" id="oxInfo"></p></div>
+  </section>
+
+  <section id="s-hal" aria-labelledby="hHal">
+    <div class="sec-head"><div><h2 id="hHal">Hallazgos y seguimiento</h2><p>Acciones surgidas de los informes predictivos. En la versión publicada se cargan desde la pestaña HALLAZGOS del Google Sheets.</p></div></div>
+    <div class="panel"><div class="tbl-wrap"><table id="tabHal"></table></div></div>
+  </section>
+
+  <section id="s-src" aria-labelledby="hSrc">
+    <div class="sec-head"><div><h2 id="hSrc">Fuentes de datos</h2><p>Qué alimenta cada tema y con qué frecuencia.</p></div></div>
+    <div class="src">
+      <div class="panel"><span class="freq">Por período · CSV</span><h3>Condición operativa</h3><p>Export HistoryView (Unit 1) de cada planta. Se procesa a un archivo de datos del repositorio con las tendencias por sistema.</p></div>
+      <div class="panel"><span class="freq">Por relevamiento · Google Sheets</span><h3>Vibraciones</h3><p>Pestaña VIBRACIONES: una fila por medición y planta, con los 20 puntos y los límites de alarma y paro.</p></div>
+      <div class="panel"><span class="freq">Por muestra · Google Sheets</span><h3>Análisis de aceite</h3><p>Pestaña ACEITE: una fila por muestra (informe YPF AUCTOR). Pestaña OXIDACION para RPVOT, RULER y MPC.</p></div>
+      <div class="panel"><span class="freq">Continuo · Google Sheets</span><h3>Hallazgos</h3><p>Pestaña HALLAZGOS: acción, responsable y estado (Pendiente / En curso / Programado / Cerrado / A definir).</p></div>
+    </div>
+  </section>
+</main>
+<footer class="wrap"><dl>
+  <dt>Fuentes</dt><dd>Informes predictivos de condición operativa TC1 Tratayén y Salliqueló (ene–jun 2026) · Informe trimestral predictivo GPM (vibraciones) · Informe predictivo de análisis de aceite (YPF AUCTOR, ago-2026).</dd>
+  <dt>Estado</dt><dd>Condición operativa con datos reales del 1er semestre 2026 (scada_2026-S1.js). Vibraciones, aceite y hallazgos embebidos hasta conectar el Google Sheets.</dd>
+</dl></footer>
+<div class="tip" id="tip" hidden></div>
+<!-- Condición operativa: un archivo por período (generado con build_scada.py) -->
+<script src="scada_2026-S1.js"></script>
+<script>
+/* Datos del prototipo — Predictivo de Turbocompresores GPM
+   Fuentes: Informe_Predictivo_TC_TTY_GPM_1 / _SQL_GPM_1 (SCADA HistoryView, ene–jun 2026),
+   INFORME_TRIMESTRAL_PREDICTIVO_GPM (relevamiento de vibraciones), Informe_Predictivo_Aceite_GPM_2 (YPF AUCTOR). */
+const PLANTAS = {
+  TTY: { nombre: "Tratayén", eq: "TC1 · Solar Mars 100" },
+  SQL: { nombre: "Salliqueló", eq: "TC1 · Solar Mars 100" }
+};
+
+/* Condición operativa: un bloque por sistema, igual que el informe.
+   v: [promedio, mínimo, máximo] en operación (Ngp > 5 %). est: ok | warn */
+const PERIODO_ACTUAL = "2026-S1";
+const PERIODOS = {"2026-S1": "1er semestre 2026"};
+/* est / hz: semáforo y hallazgos del informe del período (T5 se recalcula con los datos) */
+const SCADA = [
+ { id:"gen", c:"General", t:"Resumen operativo general", d:"Velocidad del generador de gas (Ngp) y de la turbina de potencia (Npt): regímenes de operación, arranques y paradas.",
+   vars:[ {n:"Velocidad Ngp", u:"%", tag:"AN_Ngp"}, {n:"Velocidad Npt", u:"%", tag:"AN_Npt"}, {n:"Horas en operación por día", u:"h", tag:"hop"} ],
+   est:{TTY:"ok",SQL:"ok"},
+   hz:{TTY:"Compatibles con intervenciones programadas. Las caídas de Ngp y Npt corresponden a paros del equipo.",
+       SQL:"Compatible con mantenimiento programado."}},
+ { id:"t5", c:"Temperatura T5", t:"Turbina · Temperatura de escape (T5)", d:"T5 promedio y divergencia entre las 17 termocuplas. Evalúa cámara de combustión y sondas.",
+   vars:[ {n:"T5 promedio", u:"°C", tag:"AN_T5_Average_Temperature"},
+          {n:"Divergencia T5 (máx − mín)", u:"°C", tag:"div"} ],
+   est:{TTY:"ok",SQL:"warn"},
+   hz:{TTY:"Observación: después de la parada del 12/04 cambia el reparto de temperaturas entre termocuplas (TC4–TC7 bajan 19 a 31 °C; TC9–TC17 suben 21 a 44 °C) y el T5 promedio pasa de 701 a 713 °C. Verificar si hubo intervención en combustión o instrumentación.",
+       SQL:"Termocupla TC1 con valores anormalmente bajos (prom. 32,7 °C vs 694,2 °C de mediana del resto) en 388 registros, 26/01–22/06. Compatible con lazo abierto o sonda F/S. Verificar lazo de medición."}},
+ { id:"lub", c:"Lubricación", t:"Sistema de lubricación", d:"Presión de header, DP de filtro, nivel y temperaturas del aceite. Una lubricación insuficiente daña los cojinetes.",
+   vars:[ {n:"Presión header", u:"bar", tag:"AN_Lube_Oil_Header_Press"},
+          {n:"DP filtro de aceite", u:"bar", tag:"AN_Lube_Oil_Filter_DP"},
+          {n:"Nivel de tanque", u:"%", tag:"AN_Lube_Oil_Tank_Level"},
+          {n:"Temperatura de tanque", u:"°C", tag:"AN_Lube_Oil_Tank_Temp"},
+          {n:"Temperatura header", u:"°C", tag:"AN_Lube_Oil_Header_Temp"} ],
+   est:{TTY:"ok",SQL:"ok"}, hz:{TTY:"Sin desvíos.",SQL:"El DP del filtro de aceite baja de 0,41 a 0,30 bar después de la parada del 31/03–08/04, compatible con recambio de elementos filtrantes."}},
+ { id:"seal", c:"Seal gas", t:"Sello de gas (Seal Gas) · Compresor HPC", d:"Flujos de sello séptico, venteo primario, DP de seal gas y filtro, bomba de refuerzo. Detecta obstrucciones o fugas.",
+   vars:[ {n:"Flujo sello séptico · descarga", u:"m³/h", tag:"AN_HPC_Dis_Sept_Seal_Flow"},
+          {n:"Flujo sello séptico · succión", u:"m³/h", tag:"AN_HPC_Suc_Sept_Seal_Flow"},
+          {n:"Flujo secundario calculado · succión", u:"m³/h", tag:"AN_HPC_Suc_Sec_Calc_Flow"},
+          {n:"Presión venteo primario · descarga", u:"bar", tag:"AN_HPC_Dis_Pri_Vent_Press"},
+          {n:"Presión venteo primario · succión", u:"bar", tag:"AN_HPC_Suc_Pri_Vent_Press"},
+          {n:"DP seal gas", u:"bar", tag:"AN_HPC_Seal_Gas_DP"},
+          {n:"DP filtro seal gas", u:"bar", tag:"AN_HPC_Seal_Gas_Filter_DP"},
+          {n:"DP filtro aire · boost pump", u:"bar", tag:"AN_HPC_Seal_Boost_Pump_Air_Filter_DP"},
+          {n:"Flujo suministro aire · boost pump", u:"m³/h", tag:"AN_HPC_Seal_Boost_Pump_Air_Supply_Flow"},
+          {n:"Temperatura suministro seal gas", u:"°C", tag:"AN_Seal_Gas_Supply_Temp"} ],
+   est:{TTY:"ok",SQL:"ok"}, hz:{TTY:"Observación: el DP del filtro de seal gas sube de 0,26 bar (prom. enero) a 0,41 bar (abril) y se mantiene en 0,36–0,37 bar en mayo–junio. Seguir la tendencia y confirmar el valor de recambio del filtro.",SQL:"Sin desvíos."}},
+ { id:"buf", c:"Buffer air", t:"Aire de sello (Buffer Air)", d:"DP del filtro de aire de sello y del buffer air del HPC. Detecta colmatación de filtros.",
+   vars:[ {n:"DP filtro buffer air", u:"bar", tag:"AN_Buffer_Air_Fltr_DP"},
+          {n:"DP buffer air HPC", u:"bar", tag:"AN_HPC_Buffer_Air_DP"} ],
+   est:{TTY:"ok",SQL:"ok"}, hz:{TTY:"Sin desvíos.",SQL:"Sin desvíos."}},
+ { id:"adm", c:"Admisión", t:"Admisión de aire", d:"Temperatura ambiente T1, presión de suministro de aire y DP de admisión y filtro. Ensuciamiento de filtros y rendimiento.",
+   vars:[ {n:"Temperatura ambiente T1", u:"°C", tag:"AN_T1_Temperature"},
+          {n:"Presión suministro de aire", u:"bar", tag:"AN_Air_Supply_Pressure"},
+          {n:"DP admisión", u:"mbar", tag:"AN_Turb_Air_Inlet_DP"},
+          {n:"DP filtro de admisión", u:"mbar", tag:"AN_Turb_Air_Inlet_Filter_DP"} ],
+   est:{TTY:"ok",SQL:"ok"}, hz:{TTY:"Sin desvíos.",SQL:"Sin desvíos."}},
+ { id:"vib", c:"Vibraciones motor", t:"Vibraciones del motor (turbina)", d:"Vibración radial X/Y en los 5 cojinetes, velocidad de la caja auxiliar (AGB) y desplazamiento axial.",
+   vars:[ {n:"Cojinete 1 · X", u:"µm", tag:"AN_Eng_Brg_1X_Vib"},
+          {n:"Cojinete 1 · Y", u:"µm", tag:"AN_Eng_Brg_1Y_Vib"},
+          {n:"Cojinete 2 · X", u:"µm", tag:"AN_Eng_Brg_2X_Vib"},
+          {n:"Cojinete 2 · Y", u:"µm", tag:"AN_Eng_Brg_2Y_Vib"},
+          {n:"Cojinete 3 · X", u:"µm", tag:"AN_Eng_Brg_3X_Vib"},
+          {n:"Cojinete 3 · Y", u:"µm", tag:"AN_Eng_Brg_3Y_Vib"},
+          {n:"Cojinete 4 · X", u:"µm", tag:"AN_Eng_Brg_4X_Vib"},
+          {n:"Cojinete 4 · Y", u:"µm", tag:"AN_Eng_Brg_4Y_Vib"},
+          {n:"Cojinete 5 · X", u:"µm", tag:"AN_Eng_Brg_5X_Vib"},
+          {n:"Cojinete 5 · Y", u:"µm", tag:"AN_Eng_Brg_5Y_Vib"},
+          {n:"Velocidad caja auxiliar (AGB)", u:"mm/s", tag:"AN_AGB_Vel"},
+          {n:"Desplazamiento axial", u:"mm", tag:"AN_Eng_GP_Ax_Disp"} ],
+   est:{TTY:"ok",SQL:"ok"}, hz:{TTY:"Máximos muy por debajo de la alarma del relevamiento (64 µm). Observación: el cojinete 5 · Y marca cerca de 0 µm (prom. 0,55) del 29/01 al 15/02 con la máquina en marcha, compatible con falla de sensor o de lazo; luego vuelve a valores normales.",SQL:"Máximos muy por debajo de la alarma del relevamiento (64 µm). Observación: el cojinete 2 · Y cae a ~1,5 µm del 07/06 al 22/06 con la máquina en marcha, compatible con falla de sensor o de lazo. Coincide con el período en que la termocupla TC1 queda fuera de rango."}},
+ { id:"hpc", c:"Compresor HPC", t:"Succión / descarga · Compresor HPC", d:"Presiones y temperaturas de succión y descarga, y vibración radial en succión y descarga del compresor.",
+   vars:[ {n:"Presión de succión", u:"bar", tag:"AN_HPC_Suction_Press"},
+          {n:"Presión de descarga", u:"bar", tag:"AN_HPC_Discharge_Press"},
+          {n:"Temperatura de succión", u:"°C", tag:"AN_HPC_Suction_Temp"},
+          {n:"Temperatura de descarga", u:"°C", tag:"AN_HPC_Discharge_Temp"},
+          {n:"Vibración succión · X", u:"µm", tag:"AN_HPC_Suc_X_Vib"},
+          {n:"Vibración succión · Y", u:"µm", tag:"AN_HPC_Suc_Y_Vib"},
+          {n:"Vibración descarga · X", u:"µm", tag:"AN_HPC_Dis_X_Vib"},
+          {n:"Vibración descarga · Y", u:"µm", tag:"AN_HPC_Dis_Y_Vib"} ],
+   est:{TTY:"ok",SQL:"ok"}, hz:{TTY:"Sin desvíos.",SQL:"Sin desvíos."}}
+];
+
+/* Relevamiento de vibraciones (planilla VIBR TTCC). Puntos: X/Y por cojinete. */
+const VIB_PUNTOS = [
+ {k:"c1",n:"Cojinete 1",u:"µm",ax:["X","Y"],alarma:64,paro:101},
+ {k:"c2",n:"Cojinete 2",u:"µm",ax:["X","Y"],alarma:64,paro:79},
+ {k:"c3",n:"Cojinete 3",u:"µm",ax:["X","Y"],alarma:64,paro:101},
+ {k:"c4",n:"Cojinete 4",u:"µm",ax:["X","Y"],alarma:64,paro:101},
+ {k:"c5",n:"Cojinete 5",u:"µm",ax:["X","Y"],alarma:64,paro:101},
+ {k:"sc",n:"Succión CGN",u:"µm",ax:["X","Y"],alarma:64,paro:76},
+ {k:"dc",n:"Descarga CGN",u:"µm",ax:["X","Y"],alarma:76,paro:89},
+ {k:"ax",n:"Cojinete axial",u:"",ax:["A","B"],alarma:3,paro:4.5,abs:true},
+ {k:"ca",n:"Caja auxiliar",u:"",ax:["—"],alarma:5.5,paro:7}
+];
+/* fila: fecha, RPM GG, RPM TP, c1X,c1Y,c2X,c2Y,c3X,c3Y,c4X,c4Y,c5X,c5Y,scX,scY,dcX,dcY,axA,axB,ca */
+const VIB = {
+ TTY:{limites:"planilla", filas:[
+  ["2025-01-13",1.03,0.75,12,13,11,11,18,18,8,8,8,9,13,9,9,8,-0.15,-0.04,2.8],
+  ["2025-01-15",1.03,0.76,11,12,11,12,18,18,7,8,8,9,9,11,11,10,-0.162,-0.037,2.7],
+  ["2025-01-31",1.03,0.78,11,12,11,11,18,17,8,9,9,8,10,12,11,9,-0.163,-0.04,2.6],
+  ["2025-02-08",1.03,0.8,11,11,12,11,19,18,8,8,8,9,11,13,10,8,-0.166,-0.039,2.5],
+  ["2025-02-08",1.03,0.79,11,12,12,12,18,17,8,9,9,9,11,12,10,9,-0.166,-0.039,2.5],
+  ["2025-02-08",1.03,0.75,12,12,11,11,19,18,9,8,9,8,9,13,9,8,-0.156,-0.036,2.6],
+  ["2026-03-05",1,0.74,11,11,10,10,15,14,7,7,8,8,12,9,8,8,-0.16,-0.03,2],
+  ["2026-03-07",1.008,0.74,11,11,10,10,14,15,7,7,8,8,12,9,8,9,-0.17,-0.03,2.2],
+  ["2026-03-11",1,0.74,11,11,9,10,14,14,6,6,8,8,12,9,9,8,-0.17,-0.04,2.1]]},
+ SQL:{limites:"tomados de TTY (a confirmar)", filas:[
+  ["2026-01-16",1.012,0.89,8,7,11,15,12,11,7,8,11,11,15,13,15,14,-0.12,0.09,2],
+  ["2026-01-24",1.008,0.884,6,8,12,17,14,13,9,8,13,13,13,12,14,13,-0.13,0.1,1.8],
+  ["2026-01-31",1.016,0.914,7,8,13,16,15,15,7,7,14,13,11,11,16,15,-0.12,0.11,2.42],
+  ["2026-02-01",1.003,0.883,7,9,12,16,15,14,7,7,12,14,13,11,14,14,-0.13,0.1,2.63],
+  ["2026-02-19",1.005,0.91,6,9,10,16,15,13,7,7,10,10,14,13,18,15,-0.13,0.11,2.1],
+  ["2026-02-26",0.995,0.921,7,8,10,16,14,13,7,8,12,11,14,12,16,15,-0.14,0.1,2.1],
+  ["2026-03-19",1.015,0.921,7,7,11,15,15,14,7,7,12,12,15,13,18,16,-0.12,0.11,2.4],
+  ["2026-03-28",1.009,0.901,6,8,9,14,15,13,7,7,9,11,15,14,15,15,-0.13,0.11,1.8],
+  ["2026-03-29",1.007,0.909,6,8,10,16,15,13,7,8,11,12,15,14,15,15,-0.13,0.11,1.8]]}
+};
+
+/* Análisis de aceite (YPF AUCTOR). Límites Min/Max por lubricante. */
+const ACEITE_PARAMS = [
+ {k:"visc",n:"Viscosidad 40 °C",u:"cSt",grp:"Viscosidad"},
+ {k:"ox",n:"Oxidación",u:"Abs/0,1mm",max:1,grp:"Química"},
+ {k:"tan",n:"TAN",u:"mg KOH/g",max:1,grp:"Química"},
+ {k:"fe",n:"Fe",u:"ppm",max:20,grp:"Desgaste"},{k:"cr",n:"Cr",u:"ppm",max:5,grp:"Desgaste"},
+ {k:"pb",n:"Pb",u:"ppm",max:10,grp:"Desgaste"},{k:"cu",n:"Cu",u:"ppm",max:15,grp:"Desgaste"},
+ {k:"sn",n:"Sn",u:"ppm",max:10,grp:"Desgaste"},{k:"al",n:"Al",u:"ppm",max:15,grp:"Desgaste"},
+ {k:"ni",n:"Ni",u:"ppm",max:5,grp:"Desgaste"},
+ {k:"si",n:"Si",u:"ppm",max:20,grp:"Contaminación / aditivos"},{k:"na",n:"Na",u:"ppm",max:30,grp:"Contaminación / aditivos"},
+ {k:"b",n:"B",u:"ppm",max:10,grp:"Contaminación / aditivos"},{k:"mo",n:"Mo",u:"ppm",max:30,grp:"Contaminación / aditivos"},
+ {k:"k",n:"K",u:"ppm",max:30,grp:"Contaminación / aditivos"}
+];
+/* orden de valores por muestra: visc, ox, fe, cr, pb, cu, sn, al, ni, si, na, b, mo, k, tan */
+const ACEITE_ORDEN = ["visc","ox","fe","cr","pb","cu","sn","al","ni","si","na","b","mo","k","tan"];
+const ACEITE = {
+ TTY:{lub:"Turbina EP 32", visc:[32,38], diag:"Lubricante Normal · Equipo Normal · Criticidad baja", muestras:[
+  ["2025-05-23",4235,[33.75,0,0,0,0,0,0,0,1,0.1,3.1,0,0,0.2,0.1]],
+  ["2025-07-25",5728,[33.72,0,0,0,0,0,0,0,0.9,0.5,3.7,0,0,0.3,0.1]],
+  ["2025-08-18",6310,[33.73,0,0,0,0,0.1,0,0,0.9,1.6,4,0,0,0.4,0.1]],
+  ["2026-02-02",8416,[33.62,0.02,0,0,0,0,0,0,1.5,0,5.6,0,0,0,0.1]],
+  ["2026-05-15",10530,[33.84,0,0.1,0,0.1,0.1,0.5,0.4,0.1,0.4,6.6,0,0.6,0.2,0.1]],
+  ["2026-08-07",12620,[33.81,0.02,0,0,0,0.2,0,0.2,2.2,0.5,7.3,0,0,0.4,0.1]]]},
+ SQL:{lub:"Turbina EP 46", visc:[43,49], diag:"Lubricante Normal · Equipo Normal · Criticidad baja", muestras:[
+  ["2025-06-13",2100,[45.31,0,1.8,0.2,0,0.3,2.9,0.8,0,4.5,2.8,1.1,4.2,1.2,0.1]],
+  ["2025-09-08",4200,[45.3,0,0,0,0,0.1,0,0,0,1.7,4.3,0,0,0.2,0.1]],
+  ["2025-12-29",5600,[45.68,0,0,0,0,0,0,0,0.7,1.4,4.5,0,0,0.6,0.1]],
+  ["2026-02-06",6300,[45.54,0,0,0,0,0.1,0,0,0,0.3,5.5,0,0,0,0.1]],
+  ["2026-05-13",8400,[45.65,0,0,0.3,0,0,0,3.3,0,3.3,6.7,0,0.1,4.4,0.1]],
+  ["2026-08-10",10500,[45.9,0,0,0,1.6,0.3,0,0.5,1.6,0.2,6.7,0,0,1,0.1]]]}
+};
+/* Ensayos complementarios de oxidación. tipo: min = alarma por debajo; max = alarma por encima */
+const OXID = [
+ {n:"RPVOT (RBOT) · ASTM D-2272", u:"min", ref:"Aceite nuevo ≥ 760 min · alarma < 190 min (25 %)", lim:190, ref2:760, tipo:"min", TTY:515, SQL:1093},
+ {n:"RULER · antioxidante amínico", u:"%", ref:"Alarma < 25 %", lim:25, tipo:"min", TTY:93.9, SQL:93.1},
+ {n:"RULER · antioxidante fenólico", u:"%", ref:"Alarma < 25 %", lim:25, tipo:"min", TTY:50.4, SQL:47.6},
+ {n:"MPC · varniz potencial (ΔE) · ASTM D-7843", u:"ΔE", ref:"Límite ΔE = 30", lim:30, tipo:"max", TTY:3.5, SQL:2.9}
+];
+const OXID_INFO = { TTY:"Informe YPF 00007337-1 (20/07/2026) · muestra 12/06/2026 · 11.465 h", SQL:"Informe YPF 00007296-1 (28/04/2026) · muestra 04/03/2026 · 6.954 h" };
+
+/* Hallazgos y seguimiento (pasará a la pestaña HALLAZGOS del Google Sheets) */
+const HALLAZGOS = [
+ {f:"2026-06-29",p:"SQL",tema:"Condición operativa · T5",d:"Termocupla TC1 con lectura anormalmente baja (lazo abierto o sonda F/S).",acc:"Verificar lazo de medición de AN_T5_TC1.",est:"Pendiente"},
+ {f:"2026-08-10",p:"Ambas",tema:"Aceite · contaminación",d:"Tendencia sostenida al alza de Sodio (Na) en ambas TC1 (TTY 3,1→7,3 ppm; SQL 2,8→6,7 ppm). Lejos del límite (30 ppm).",acc:"Seguimiento conjunto en las próximas muestras.",est:"En curso"},
+ {f:"2026-08-07",p:"TTY",tema:"Aceite · desgaste",d:"Níquel (Ni) irregular, 2,2 ppm en la última muestra (límite 5 ppm).",acc:"Confirmar continuidad en la próxima extracción.",est:"En curso"},
+ {f:"2026-08-10",p:"SQL",tema:"Aceite · desgaste",d:"Pb 1,6 ppm sin antecedentes; picos de Al, Si y K en la muestra del 13/05/2026.",acc:"Confirmar continuidad de Pb, Al y Ni en la próxima extracción.",est:"En curso"},
+ {f:"2026-07-20",p:"Ambas",tema:"Aceite · oxidación",d:"RPVOT / RULER / MPC con buen estado de oxidación.",acc:"Repetir ensayos en 6 meses (≈ 4.200 h).",est:"Programado"},
+ {f:"2026-08-10",p:"Ambas",tema:"Mejora de proceso",d:"Definir umbral de atención intermedio (60–70 % del límite) para aceite y vibraciones.",acc:"Acordar criterio y aplicarlo al semáforo del tablero.",est:"A definir"},
+ {f:"2026-06-30",p:"TTY",tema:"Condición operativa · Seal gas",d:"DP filtro seal gas en aumento: 0,26 bar (ene) → 0,41 bar (abr), 0,37 bar (jun).",acc:"Seguir tendencia y confirmar valor de recambio del filtro.",est:"En curso"},
+ {f:"2026-06-30",p:"SQL",tema:"Condición operativa · Vibraciones",d:"Sonda de cojinete 2 · Y con lectura ~1,5 µm del 07/06 al 22/06 (posible falla de sensor/lazo).",acc:"Verificar sonda y lazo junto con la termocupla TC1.",est:"Pendiente"},
+ {f:"2026-06-30",p:"TTY",tema:"Condición operativa · T5",d:"Cambio de reparto de temperaturas entre termocuplas y T5 promedio +12 °C después de la parada del 12/04.",acc:"Confirmar si hubo intervención en combustión o instrumentación.",est:"A definir"},
+ {f:"2026-03-29",p:"SQL",tema:"Vibraciones · relevamiento",d:"La planilla de SQL no trae filas de Alarma/Paro.",acc:"Confirmar límites (hoy se usan los de TTY).",est:"Pendiente"}
+];
+
+</script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const NS = "http://www.w3.org/2000/svg";
+const PC = { TTY: "var(--s1)", SQL: "var(--s2)" };
+const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const fmtN = (v, d) => v == null ? "—" : v.toLocaleString("es-AR", { minimumFractionDigits: d, maximumFractionDigits: d });
+function dec(v){ const a = Math.abs(v); return a >= 100 ? 1 : a >= 10 ? 1 : a >= 1 ? 2 : 3; }
+const fmt = v => v == null ? "—" : v.toLocaleString("es-AR", {minimumFractionDigits: 0, maximumFractionDigits: dec(v)});
+const D = s => new Date(s + "T00:00:00");
+const fD = d => String(d.getDate()).padStart(2,"0") + "/" + String(d.getMonth()+1).padStart(2,"0") + "/" + String(d.getFullYear()).slice(2);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const ICON = {
+  ok: '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.3l2.3 2.2 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  warn: '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5l4.8 8.6H1.2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 5v2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="6" cy="8.7" r=".8" fill="currentColor"/></svg>',
+  bad: '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.2 4.2l3.6 3.6M7.8 4.2l-3.6 3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  na: ''
+};
+const ESTXT = { ok: "Normal", warn: "Atención", bad: "Alarma", na: "Sin datos" };
+const pill = (e, txt) => `<span class="pill ${e}">${ICON[e]}${txt || ESTXT[e]}</span>`;
+
+/* ---------- tooltip ---------- */
+const tip = $("#tip");
+function showTip(host, x, y, html){
+  tip.innerHTML = html; tip.hidden = false;
+  const r = host.getBoundingClientRect();
+  let left = r.left + window.scrollX + x, top = r.top + window.scrollY + y - 10;
+  tip.style.left = left + "px"; tip.style.top = top + "px";
+  const tr = tip.getBoundingClientRect();
+  if (tr.left < 4) tip.style.left = (left + (4 - tr.left)) + "px";
+  if (tr.right > innerWidth - 4) tip.style.left = (left - (tr.right - innerWidth + 4)) + "px";
+  if (tr.top < 4) tip.style.top = (top + tr.height + 24) + "px";
+}
+const hideTip = () => { tip.hidden = true; };
+document.body.style.position = "relative"; tip.style.position = "absolute";
+
+function el(tag, attrs, parent){ const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function niceTicks(lo, hi, n){
+  const span = hi - lo || 1, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1,2,2.5,5,10].map(m => m*mag).find(s => span / s <= n) || 10*mag;
+  const out = []; for (let v = Math.ceil(lo/step)*step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+
+/* ---------- gráfico de líneas temporal ---------- */
+function lineChart(host, o){
+  host.innerHTML = "";
+  const W = Math.max(host.clientWidth, 220), H = o.h || 170, m = {l: 40, r: 10, t: 10, b: 22};
+  const svg = el("svg", {viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": o.aria || ""}, host);
+  if (o.seq){ // eje por medición (relevamientos): índice ordinal con etiquetas de fecha
+    const ts = [...new Set(o.series.flatMap(s => s.pts.map(p => p[0].getTime())))].sort((a, b) => a - b);
+    o = Object.assign({}, o, {seqT: ts, series: o.series.map(s => Object.assign({}, s, {pts: s.pts.map(p => [new Date(ts.indexOf(p[0].getTime())), p[1], p[2], p[0]])}))});
+  }
+  const xs = o.series.flatMap(s => s.pts.map(p => p[0].getTime()));
+  let x0 = Math.min(...xs), x1 = Math.max(...xs); if (x0 === x1){ x0 -= 864e5*15; x1 += 864e5*15; }
+  const pad = (x1 - x0) * 0.04; x0 -= pad; x1 += pad;
+  const ys = o.series.flatMap(s => s.pts.flatMap(p => p[4] != null ? [p[1], p[4], p[5]] : [p[1]])).concat(o.band || [], (o.refs || []).filter(r => r.inScale).map(r => r.v));
+  let y0 = o.yMin != null ? o.yMin : Math.min(...ys), y1 = o.yMax != null ? o.yMax : Math.max(...ys);
+  if (y1 - y0 < 1e-9){ y1 += 1; y0 -= 1; }
+  const yp = (y1 - y0) * 0.12; if (o.yMin == null) y0 -= yp; if (o.yMax == null) y1 += yp;
+  if (o.zero && y0 > 0 && o.yMin == null) y0 = 0;
+  const X = t => m.l + (t - x0) / (x1 - x0) * (W - m.l - m.r);
+  const Y = v => H - m.b - (v - y0) / (y1 - y0) * (H - m.t - m.b);
+  const ticks = niceTicks(y0, y1, 4);
+  ticks.forEach(v => { el("line", {x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: "var(--grid)"}, svg);
+    const t = el("text", {x: m.l - 6, y: Y(v) + 4, "text-anchor": "end"}, svg); const st = ticks.length > 1 ? Math.abs(ticks[1]-ticks[0]) : 1; t.textContent = fmtN(v, Math.max(0, -Math.floor(Math.log10(st) + 1e-9))); });
+  if (o.band){ el("rect", {x: m.l, width: W - m.l - m.r, y: Y(Math.min(o.band[1], y1)), height: Math.max(0, Y(Math.max(o.band[0], y0)) - Y(Math.min(o.band[1], y1))), fill: "var(--ok-bg)", opacity: .55}, svg); }
+  (o.refs || []).forEach(r => { if (r.v < y0 || r.v > y1) return; el("line", {x1: m.l, x2: W - m.r, y1: Y(r.v), y2: Y(r.v), stroke: "var(--thr)", "stroke-width": 1.5, "stroke-dasharray": r.dash ? "4 3" : null}, svg);
+    const t = el("text", {x: W - m.r, y: Y(r.v) - 4, "text-anchor": "end"}, svg); t.textContent = r.label; });
+  // eje x: meses
+  if (o.seqT){ const n = o.seqT.length, show = new Set([0, n - 1]);
+    o.seqT.forEach((t, i) => { if (i && t - o.seqT[i-1] > 150*864e5){ show.add(i); el("line", {x1: (X(i-1) + X(i)) / 2, x2: (X(i-1) + X(i)) / 2, y1: m.t, y2: H - m.b, stroke: "var(--ink-3)", "stroke-dasharray": "2 3"}, svg); } });
+    let lastX = -1e9; const ord = [...show].sort((a, b) => a - b); ord.forEach(i => { if (X(i) - lastX < 70 || (i !== n - 1 && X(n - 1) - X(i) < 80)) return; lastX = X(i); const t = el("text", {x: X(i), y: H - 6, "text-anchor": i === 0 ? "start" : i === n - 1 ? "end" : "middle"}, svg); t.textContent = fD(new Date(o.seqT[i])); });
+  }
+  const d0 = new Date(x0), d1 = new Date(x1); const months = o.seqT ? [] : [];
+  if (!o.seqT)
+  for (let d = new Date(d0.getFullYear(), d0.getMonth() + 1, 1); d <= d1; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) months.push(d);
+  const every = Math.max(1, Math.ceil(months.length / Math.max(2, Math.floor((W - m.l) / 62))));
+  let lastY = null;
+  months.forEach((d, i) => { if (i % every) return; const t = el("text", {x: X(d.getTime()), y: H - 6, "text-anchor": "middle"}, svg);
+    t.textContent = MESES[d.getMonth()] + (d.getFullYear() !== lastY ? "-" + String(d.getFullYear()).slice(2) : ""); lastY = d.getFullYear(); });
+  el("line", {x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: "var(--line)"}, svg);
+  const gapMs = (o.gapDays || 150) * 864e5;
+  o.series.forEach(s => { if (!s.band) return;
+    const pts = s.pts.filter(p => p[4] != null).sort((a, b) => a[0] - b[0]); let seg = [];
+    const flush = () => { if (seg.length > 1) el("path", {d: "M" + seg.map(p => X(p[0].getTime()).toFixed(1) + "," + Y(p[5]).toFixed(1)).join("L") + "L" + seg.slice().reverse().map(p => X(p[0].getTime()).toFixed(1) + "," + Y(p[4]).toFixed(1)).join("L") + "Z", fill: s.color, opacity: .16}, svg); seg = []; };
+    pts.forEach((p, i) => { if (i && p[0] - pts[i-1][0] > gapMs) flush(); seg.push(p); }); flush(); });
+  o.series.forEach(s => {
+    const pts = s.pts.slice().sort((a, b) => a[0] - b[0]);
+    el("path", {d: pts.map((p, i) => (i && ((p[3] || p[0]) - (pts[i-1][3] || pts[i-1][0])) <= gapMs ? "L" : "M") + X(p[0].getTime()).toFixed(1) + "," + Y(p[1]).toFixed(1)).join(""), fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round"}, svg);
+    if (pts.length <= 40) pts.forEach(p => el("circle", {cx: X(p[0].getTime()), cy: Y(p[1]), r: 3.5, fill: s.color, stroke: "var(--panel)", "stroke-width": 2}, svg));
+  });
+  // capa de hover
+  const cross = el("line", {y1: m.t, y2: H - m.b, stroke: "var(--ink-3)", "stroke-width": 1, visibility: "hidden"}, svg);
+  const hit = el("rect", {x: m.l, y: 0, width: W - m.l - m.r, height: H, fill: "transparent"}, svg);
+  const allT = [...new Set(xs)].sort((a, b) => a - b);
+  hit.addEventListener("mousemove", ev => {
+    const r = svg.getBoundingClientRect(), mx = (ev.clientX - r.left) * W / r.width;
+    let best = allT[0]; allT.forEach(t => { if (Math.abs(X(t) - mx) < Math.abs(X(best) - mx)) best = t; });
+    cross.setAttribute("x1", X(best)); cross.setAttribute("x2", X(best)); cross.setAttribute("visibility", "visible");
+    const rows = o.series.map(s => { const p = s.pts.filter(q => q[0].getTime() === best); return p.length ? p.map(q => `<div><span class="sw" style="background:${s.color}"></span>${esc(s.name)} <b>${fmt(q[1])}</b> ${o.unit || ""}${q[4] != null ? ` <span style="opacity:.75">(${fmt(q[4])}–${fmt(q[5])})</span>` : ""}${q[2] ? " · " + q[2] : ""}</div>`).join("") : ""; }).join("");
+    showTip(host, X(best) * r.width / W, m.t, `<div style="margin-bottom:2px">${fD(o.seqT ? new Date(o.seqT[best]) : new Date(best))}</div>${rows}`);
+  });
+  hit.addEventListener("mouseleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(); });
+}
+
+/* ---------- datos SCADA del período ---------- */
+let periodo = PERIODO_ACTUAL;
+const SD = p => SCADA_DATA[periodo][p];
+const fDT = s => { const [d, h] = s.split(" "); return fD(D(d)) + (h ? " " + h : ""); };
+function serie(p, tag){ const S = SD(p);
+  if (tag === "hop") return S.dias.map((d, i) => [D(d), S.hop[i]]);
+  const v = S.v[tag]; if (!v) return [];
+  return S.dias.map((d, i) => v.a[i] == null ? null : [D(d), v.a[i], null, null, v.n[i], v.x[i]]).filter(Boolean); }
+function statOf(p, tag){ const S = SD(p); if (tag === "hop"){ const op = S.hop.filter((h, i) => S.hreg[i] > 0); return [op.reduce((a, b) => a + b, 0) / op.length, Math.min(...op), Math.max(...op)]; } return S.st[tag] || [null, null, null]; }
+const t5Anom = p => Object.entries(SD(p).t5anom).filter(([k, v]) => v.n >= 24);
+function estSys(s, p){ if (s.id === "t5") return t5Anom(p).length ? "warn" : "ok"; return s.est[p]; }
+
+/* ---------- semáforos ---------- */
+function vibEstado(p){ const f = VIB[p].filas, last = f[f.length - 1]; let mx = 0;
+  VIB_PUNTOS.forEach((pt, i) => vibCols(i).forEach(c => { mx = Math.max(mx, Math.abs(last[c]) / pt.alarma * 100); }));
+  return {pct: mx, e: mx >= 100 ? "bad" : mx >= 65 ? "warn" : "ok", fecha: D(last[0])}; }
+function vibCols(i){ let c = 3; for (let j = 0; j < i; j++) c += VIB_PUNTOS[j].ax.length; return VIB_PUNTOS[i].ax.map((_, k) => c + k); }
+function aceEstado(p){ const A = ACEITE[p], last = A.muestras[A.muestras.length - 1][2]; let e = "ok", mx = 0;
+  ACEITE_ORDEN.forEach((k, i) => { const pr = ACEITE_PARAMS.find(q => q.k === k), v = last[i];
+    if (k === "visc"){ if (v < A.visc[0] || v > A.visc[1]) e = "bad"; return; }
+    const pct = v / pr.max * 100; mx = Math.max(mx, pct); if (pct >= 100) e = "bad"; else if (pct >= 65 && e !== "bad") e = "warn"; });
+  return e; }
+function oxEstado(p){ return OXID.some(o => o.tipo === "min" ? o[p] < o.lim : o[p] > o.lim) ? "bad" : "ok"; }
+const halAbiertos = (p, tema) => HALLAZGOS.filter(h => (h.p === p || h.p === "Ambas") && h.tema.startsWith(tema) && h.est !== "Cerrado" && h.est !== "Programado");
+
+/* ---------- Resumen ---------- */
+function renderResumen(){
+  $("#legSem").innerHTML = pill("ok") + pill("warn") + pill("bad");
+  $("#resCards").innerHTML = ["TTY", "SQL"].map(p => { const P = PLANTAS[p], S = SD(p), v = vibEstado(p), A = ACEITE[p], la = A.muestras[A.muestras.length - 1];
+    const nWarn = SCADA.filter(s => estSys(s, p) !== "ok").length + (v.e !== "ok") + (aceEstado(p) !== "ok");
+    return `<div class="panel cardp"><div class="top2"><div><h3><i class="mark" style="background:${PC[p]}"></i>PC ${P.nombre}</h3><div class="eqt">${P.eq}</div></div>${nWarn ? pill("warn", nWarn + " tema" + (nWarn > 1 ? "s" : "") + " en atención") : pill("ok", "Todo normal")}</div>
+    <div class="kv">
+      <div class="kpi"><span>Tiempo en operación</span><b>${fmtN(S.operacion, 1)} %</b><em>${fDT(S.desde.split(" ")[0])} → ${fDT(S.hasta.split(" ")[0])}</em></div>
+      <div class="kpi"><span>Paradas &gt; 12 h</span><b>${S.paradas.length}</b><em>${S.registros.toLocaleString("es-AR")} registros horarios</em></div>
+      <div class="kpi"><span>Vibraciones · máx. % alarma</span><b>${fmtN(v.pct, 0)} %</b><em>relevamiento ${fD(v.fecha)}</em></div>
+      <div class="kpi"><span>Aceite · última muestra</span><b>${fD(D(la[0]))}</b><em>${la[1].toLocaleString("es-AR")} h · ${A.lub}</em></div>
+    </div></div>`; }).join("");
+  const filas = [];
+  filas.push(`<tr class="g"><td colspan="3">Condición operativa · SCADA · ${PERIODOS[periodo]}</td></tr>`);
+  SCADA.forEach(s => filas.push(`<tr><td><a href="#sys-${s.id}">${esc(s.t)}</a></td>${["TTY","SQL"].map(p => `<td class="c">${pill(estSys(s, p))}</td>`).join("")}</tr>`));
+  filas.push(`<tr class="g"><td colspan="3">Relevamiento de vibraciones</td></tr>`);
+  filas.push(`<tr><td><a href="#s-vib">Máximo del último relevamiento vs alarma</a></td>${["TTY","SQL"].map(p => { const v = vibEstado(p); return `<td class="c">${pill(v.e, ESTXT[v.e] + " · " + fmtN(v.pct, 0) + " %")}</td>`; }).join("")}</tr>`);
+  filas.push(`<tr class="g"><td colspan="3">Análisis de aceite</td></tr>`);
+  filas.push(`<tr><td><a href="#s-ace">Última muestra vs valores de alarma</a></td>${["TTY","SQL"].map(p => { const e = aceEstado(p), n = halAbiertos(p, "Aceite").length; return `<td class="c">${pill(e)}${n ? `<div class="note" style="margin:4px 0 0;font-size:12px">${n} a vigilar</div>` : ""}</td>`; }).join("")}</tr>`);
+  filas.push(`<tr><td><a href="#s-ace">Oxidación (RPVOT · RULER · MPC)</a></td>${["TTY","SQL"].map(p => `<td class="c">${pill(oxEstado(p))}</td>`).join("")}</tr>`);
+  $("#semTab").innerHTML = `<thead><tr><th>Tema</th><th style="text-align:center"><i class="mark" style="background:var(--s1)"></i>Tratayén</th><th style="text-align:center"><i class="mark" style="background:var(--s2)"></i>Salliqueló</th></tr></thead><tbody>${filas.join("")}</tbody>`;
+}
+
+/* ---------- Condición operativa ---------- */
+function stLine(p, tag){ const [av, mn, mx] = statOf(p, tag); return `<span><i class="mark" style="background:${PC[p]}"></i>${p} <b>${fmt(av)}</b> (${mn == null ? "—" : fmt(mn)}–${fmt(mx)})</span>`; }
+function renderSCADA(){
+  $("#opSub").textContent = `Histórico HistoryView, ${PERIODOS[periodo]}. Registros horarios filtrados a operación (Ngp > 5 %) y agregados por día. Un bloque por sistema, igual que el informe.`;
+  $("#sysNav").innerHTML = SCADA.map(s => { const w = ["TTY","SQL"].some(p => estSys(s, p) !== "ok");
+    return `<a href="#sys-${s.id}">${w ? `<i style="background:var(--st-warn)"></i>` : ""}${esc(s.c)}</a>`; }).join("");
+  $("#sysWrap").innerHTML = SCADA.map(s => `<div class="panel sys" id="sys-${s.id}">
+    <div class="ph"><h3>${esc(s.t)}</h3><div style="display:flex;gap:6px;flex-wrap:wrap">${["TTY","SQL"].map(p => pill(estSys(s, p), p + " · " + ESTXT[estSys(s, p)])).join("")}</div></div>
+    <p class="desc">${esc(s.d)}</p>
+    <div class="sm2">${s.vars.map((v, i) => `<div class="vc"><div class="vh"><b>${esc(v.n)}</b><span class="un">${v.u}</span></div><div class="vs">${stLine("TTY", v.tag)}${stLine("SQL", v.tag)}</div><div class="chart" data-s="${s.id}" data-v="${i}"></div><div class="vt">${v.tag === "hop" ? "calc. sobre Ngp" : v.tag === "div" ? "calc. máx − mín TC1…TC17" : esc(v.tag)}</div></div>`).join("")}</div>
+    ${s.id === "t5" ? `<div class="hm"><div class="ph" style="margin-top:14px"><h3 style="font-size:15px">Desvío diario de cada termocupla respecto de la mediana del resto</h3><div class="legend" id="hmLeg"></div></div>${["TTY","SQL"].map(p => `<div class="lbl" style="margin-top:8px"><i class="mark" style="background:${PC[p]}"></i>${PLANTAS[p].nombre}</div><div class="chart hmc" data-p="${p}"></div>`).join("")}</div>` : ""}
+    <div class="hz">${["TTY","SQL"].map(p => `<div class="${estSys(s, p)}"><b><i class="mark" style="background:${PC[p]}"></i>Hallazgos · ${PLANTAS[p].nombre}</b>${esc(hzText(s, p))}</div>`).join("")}</div>
+  </div>`).join("");
+  drawSCADA();
+}
+function hzText(s, p){
+  if (s.id === "gen"){ const S = SD(p), par = S.paradas;
+    return `Operó el ${fmtN(S.operacion, 1)} % del período. ` + (par.length ? `${par.length} parada${par.length > 1 ? "s" : ""} > 12 h: ` + par.map(x => `${fDT(x[0])} → ${fDT(x[1])} (${fmtN(x[2], 1)} d)`).join("; ") + "." : "Sin paradas > 12 h.") + (s.hz[p] ? " " + s.hz[p] : ""); }
+  if (s.id === "t5"){ const an = t5Anom(p);
+    return an.length ? an.map(([k, v]) => `Termocupla ${k.replace("AN_T5_", "")} con lectura anormalmente baja (prom. ${fmtN(v.prom, 1)} °C vs ${fmtN(v.med, 1)} °C de mediana del resto) en ${v.n} registros, ${fD(D(v.desde))}–${fD(D(v.hasta))}. Compatible con lazo abierto o sonda F/S: verificar lazo de medición.`).join(" ")
+      : `Divergencia promedio ${fmtN(statOf(p, "div")[0], 1)} °C. Sin termocuplas fuera de servicio.` + (s.hz[p] ? " " + s.hz[p] : ""); }
+  return s.hz[p];
+}
+function drawSCADA(){
+  document.querySelectorAll("#sysWrap .chart[data-s]").forEach(h => { const s = SCADA.find(q => q.id === h.dataset.s), v = s.vars[+h.dataset.v];
+    lineChart(h, {h: 140, unit: v.u, gapDays: 1.5, aria: v.n, zero: v.tag === "hop", yMax: v.tag === "hop" ? 24 : null,
+      series: ["TTY","SQL"].map(p => ({name: PLANTAS[p].nombre, color: PC[p], band: v.tag !== "hop", pts: serie(p, v.tag)}))}); });
+  document.querySelectorAll(".hmc").forEach(h => heatT5(h, h.dataset.p));
+  const lg = $("#hmLeg"); if (lg) lg.innerHTML = `<span><span class="bx" style="background:${divColor(-100)}"></span>−100 °C o menos</span><span><span class="bx" style="background:${divColor(0)}"></span>0</span><span><span class="bx" style="background:${divColor(100)}"></span>+100 °C o más</span><span><span class="bx" style="background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></span>sin operación</span>`;
+}
+function divColor(v){ const t = Math.max(-1, Math.min(1, v / 100)), pc = Math.round(Math.abs(t) * 85);
+  return t < 0 ? `color-mix(in oklab, #2a78d6 ${pc}%, var(--hm-mid))` : `color-mix(in oklab, #d64545 ${pc}%, var(--hm-mid))`; }
+function heatT5(host, p){
+  host.innerHTML = ""; const S = SD(p), n = S.dias.length, W = Math.max(host.clientWidth, 300), lw = 42, rh = 9, H = 17 * rh + 22;
+  const cw = (W - lw) / n, svg = el("svg", {viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Desvío de termocuplas " + PLANTAS[p].nombre}, host);
+  for (let k = 0; k < 17; k++){ const tag = "AN_T5_TC" + (k + 1), dv = S.t5dev[tag];
+    if (k % 2 === 0 || k === 16){ const t = el("text", {x: lw - 6, y: k * rh + rh - 1, "text-anchor": "end", style: "font-size:9px"}, svg); t.textContent = "TC" + (k + 1); }
+    dv.forEach((v, i) => { if (v == null) return; el("rect", {x: lw + i * cw, y: k * rh, width: Math.max(cw - .3, .6), height: rh - 1, fill: divColor(v)}, svg); }); }
+  let lastM = -1; S.dias.forEach((d, i) => { const dt = D(d); if (dt.getDate() === 1 || i === 0){ if (i - lastM < 12 && i) return; lastM = i; const t = el("text", {x: lw + i * cw, y: H - 4}, svg); t.textContent = MESES[dt.getMonth()] + (dt.getMonth() === 0 || i === 0 ? "-" + String(dt.getFullYear()).slice(2) : ""); } });
+  const hit = el("rect", {x: lw, y: 0, width: W - lw, height: 17 * rh, fill: "transparent"}, svg);
+  hit.addEventListener("mousemove", ev => { const r = svg.getBoundingClientRect(), mx = (ev.clientX - r.left) * W / r.width, my = (ev.clientY - r.top) * H / r.height;
+    const i = Math.floor((mx - lw) / cw), k = Math.floor(my / rh); if (i < 0 || i >= n || k < 0 || k > 16) return hideTip();
+    const v = S.t5dev["AN_T5_TC" + (k + 1)][i];
+    showTip(host, (lw + i * cw) * r.width / W, k * rh * r.height / H, `<div>${fD(D(S.dias[i]))} · TC${k + 1}</div><div>${v == null ? "Sin operación" : `Desvío <b>${v > 0 ? "+" : ""}${fmt(v)}</b> °C vs mediana del resto`}</div>`); });
+  hit.addEventListener("mouseleave", hideTip);
+}
+
+/* ---------- Vibraciones ---------- */
+let vibP = "TTY";
+function renderVib(){
+  const F = VIB[vibP].filas, last = F[F.length - 1], ve = vibEstado(vibP);
+  $("#vibFecha").textContent = "relevamiento " + fD(D(last[0]));
+  $("#vibSub").textContent = `Medición periódica con equipo portátil (planilla VIBR TTCC) · PC ${PLANTAS[vibP].nombre} · ${F.length} mediciones · límites ${VIB[vibP].limites}.`;
+  // barras % alarma
+  const host = $("#vibPct"); host.innerHTML = "";
+  const rows = []; VIB_PUNTOS.forEach((pt, i) => vibCols(i).forEach((c, k) => rows.push({pt, ax: pt.ax[k], k, v: last[c], pct: Math.abs(last[c]) / pt.alarma * 100})));
+  const W = Math.max(host.clientWidth, 260), rh = 13, gap = 7, m = {l: 112, r: 44, t: 6, b: 20};
+  let y = m.t; const ypos = []; let prev = null;
+  rows.forEach(r => { if (prev && prev !== r.pt) y += gap; ypos.push(y); y += rh + 2; prev = r.pt; });
+  const H = y + m.b, svg = el("svg", {viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Porcentaje del valor de alarma por punto"}, host);
+  const xm = Math.max(110, ...rows.map(r => r.pct)), X = v => m.l + v / xm * (W - m.l - m.r);
+  [0, 25, 50, 75, 100].forEach(v => { el("line", {x1: X(v), x2: X(v), y1: m.t, y2: H - m.b, stroke: "var(--grid)"}, svg); const t = el("text", {x: X(v), y: H - 5, "text-anchor": "middle"}, svg); t.textContent = v + " %"; });
+  rows.forEach((r, i) => { const yy = ypos[i];
+    if (r.k === 0){ const t = el("text", {x: m.l - 8, y: yy + (r.pt.ax.length > 1 ? rh + 2 : rh / 2 + 4), "text-anchor": "end", style: "fill:var(--ink);font-family:var(--f-disp);font-size:12px;font-weight:600"}, svg); t.textContent = r.pt.n; }
+    const col = r.k === 0 ? "var(--s3)" : "var(--s4)", w = Math.max(2, X(r.pct) - m.l);
+    el("path", {d: `M${m.l},${yy} h${w - 4} a4,4 0 0 1 4,4 v${rh - 8} a4,4 0 0 1 -4,4 h${-(w - 4)} z`, fill: col}, svg);
+    const t = el("text", {x: m.l + w + 5, y: yy + rh - 2}, svg); t.textContent = fmtN(r.pct, 0) + " %";
+    const hit = el("rect", {x: 0, y: yy - 1, width: W, height: rh + 3, fill: "transparent"}, svg);
+    hit.addEventListener("mousemove", () => showTip(host, (m.l + w) * host.clientWidth / W, yy, `<div>${r.pt.n}${r.ax !== "—" ? " · " + r.ax : ""}</div><div>Lectura <b>${fmt(r.v)}</b> ${r.pt.u}</div><div>Alarma <b>${fmt(r.pt.alarma)}</b> · Paro <b>${fmt(r.pt.paro)}</b></div><div><b>${fmtN(r.pct, 0)} %</b> del valor de alarma</div>`));
+    hit.addEventListener("mouseleave", hideTip); });
+  el("line", {x1: X(65), x2: X(65), y1: m.t - 2, y2: H - m.b, stroke: "var(--thr)", "stroke-width": 1.5, "stroke-dasharray": "4 3"}, svg);
+  el("line", {x1: X(100), x2: X(100), y1: m.t - 2, y2: H - m.b, stroke: "var(--thr)", "stroke-width": 1.5}, svg);
+  // KPIs
+  const top = rows.slice().sort((a, b) => b.pct - a.pct)[0];
+  const rpm = F.map(f => f[1]);
+  $("#vibKpis").innerHTML = `<div class="kpi"><span>Estado</span><b>${pill(ve.e)}</b></div>
+    <div class="kpi"><span>Punto más cargado</span><b>${fmtN(top.pct, 0)} %</b><em>${top.pt.n}${top.ax !== "—" ? " " + top.ax : ""} · ${fmt(top.v)} de ${fmt(top.pt.alarma)}</em></div>
+    <div class="kpi"><span>RPM GG (relativa)</span><b>${fmt(last[1])}</b><em>rango ${fmt(Math.min(...rpm))}–${fmt(Math.max(...rpm))}</em></div>
+    <div class="kpi"><span>Mediciones</span><b>${F.length}</b><em>${fD(D(F[0][0]))} → ${fD(D(last[0]))}</em></div>`;
+  $("#vibNote").innerHTML = `Todos los puntos están por debajo del ${fmtN(Math.ceil(ve.pct / 5) * 5, 0)} % del valor de alarma. Cojinete axial: se evalúa el valor absoluto de cada sonda.` + (vibP === "SQL" ? ` <b>La planilla de Salliqueló no trae Alarma/Paro: se aplican los de Tratayén (mismo modelo) hasta confirmarlos.</b>` : "");
+  // small multiples
+  $("#vibSm").innerHTML = VIB_PUNTOS.map((pt, i) => `<div class="panel"><h4>${pt.n}<span>alarma ${fmt(pt.alarma)} · paro ${fmt(pt.paro)} ${pt.u}</span></h4><div class="chart" id="vsm${i}" style="margin-top:6px"></div></div>`).join("");
+  VIB_PUNTOS.forEach((pt, i) => { const cs = vibCols(i);
+    lineChart($("#vsm" + i), {h: 130, seq: true, unit: pt.u, aria: pt.n, zero: !pt.abs,
+      series: cs.map((c, k) => ({name: pt.ax.length > 1 ? (pt.abs ? "Sonda " : "Eje ") + pt.ax[k] : pt.n, color: k ? "var(--s4)" : "var(--s3)", pts: F.map(f => [D(f[0]), f[c]])})),
+      refs: [{v: pt.alarma, label: "alarma", dash: true}, {v: pt.paro, label: "paro"}]}); });
+}
+
+/* ---------- Aceite ---------- */
+function seqColor(pct){ const t = Math.min(1, pct / 100); return `color-mix(in oklab, var(--s1) ${Math.round(8 + t * 70)}%, var(--panel))`; }
+function renderAceite(){
+  $("#aceCards").innerHTML = ["TTY","SQL"].map(p => { const A = ACEITE[p], ms = A.muestras, e = aceEstado(p);
+    const head = `<tr><th>Parámetro</th>${ms.map(m => `<th>${fD(D(m[0]))}<br><span style="font-family:var(--f-num);font-weight:400;letter-spacing:0">${m[1].toLocaleString("es-AR")} h</span></th>`).join("")}<th>Límite</th></tr>`;
+    let grp = null; const body = ACEITE_PARAMS.map(pr => { const i = ACEITE_ORDEN.indexOf(pr.k);
+      const g = pr.grp !== grp ? `<tr class="g"><td colspan="${ms.length + 2}">${pr.grp}</td></tr>` : ""; grp = pr.grp;
+      const cells = ms.map(m => { const v = m[2][i];
+        if (pr.k === "visc"){ const out = v < A.visc[0] || v > A.visc[1]; return `<td class="h" style="${out ? "background:var(--bad-bg);color:var(--bad)" : ""}">${fmtN(v, 2)}</td>`; }
+        const pct = v / pr.max * 100, bg = pct >= 100 ? "var(--bad-bg)" : pct >= 65 ? "var(--warn-bg)" : v > 0 ? seqColor(pct) : "transparent";
+        return `<td class="h" style="background:${bg}" title="${fmtN(pct, 0)} % del límite">${v === 0 ? '<span style="color:var(--ink-3)">0</span>' : fmt(v)}</td>`; }).join("");
+      return g + `<tr><td class="pn">${pr.n}<small>${pr.u}</small></td>${cells}<td class="n na">${pr.k === "visc" ? A.visc.join("–") : pr.max}</td></tr>`; }).join("");
+    return `<div class="panel"><div class="ph"><h3><i class="mark" style="background:${PC[p]}"></i>TC1 ${PLANTAS[p].nombre} · ${A.lub}</h3>${pill(e)}</div>
+      <p class="note" style="margin:4px 0 10px">Diagnóstico de laboratorio: ${A.diag}. Color de celda = % del límite máximo (más intenso, más cerca).</p>
+      <div class="tbl-wrap"><table class="heat">${head}${body}</table></div></div>`; }).join("");
+  ["TTY","SQL"].forEach(p => { const A = ACEITE[p];
+    lineChart($("#visc" + p), {h: 150, unit: "cSt", band: A.visc, yMin: A.visc[0] - 1, yMax: A.visc[1] + 1, aria: "Viscosidad " + PLANTAS[p].nombre,
+      series: [{name: PLANTAS[p].nombre, color: PC[p], pts: A.muestras.map(m => [D(m[0]), m[2][0], m[1].toLocaleString("es-AR") + " h"])}]}); });
+  [["na", "#naChart", 30], ["ni", "#niChart", 5]].forEach(([k, id, lim]) => { const i = ACEITE_ORDEN.indexOf(k);
+    lineChart($(id), {h: 150, unit: "ppm", zero: true, aria: k, refs: [{v: lim, label: "límite " + lim}],
+      series: ["TTY","SQL"].map(p => ({name: PLANTAS[p].nombre, color: PC[p], pts: ACEITE[p].muestras.map(m => [D(m[0]), m[2][i], m[1].toLocaleString("es-AR") + " h"])}))}); });
+  // bullets oxidación
+  $("#oxBul").innerHTML = OXID.map((o, i) => `<div class="vn">${esc(o.n)}<small>${esc(o.ref)}</small></div><div class="tr first" data-o="${i}" data-p="TTY"></div><div class="tr" data-o="${i}" data-p="SQL"></div>`).join("");
+  $("#oxInfo").innerHTML = ["TTY","SQL"].map(p => `<span class="sw" style="background:${PC[p]};border-radius:50%"></span>${PLANTAS[p].nombre}: ${OXID_INFO[p]}`).join("<br>");
+  drawOx();
+}
+function drawOx(){
+  document.querySelectorAll("#oxBul .tr").forEach(h => { const o = OXID[+h.dataset.o], p = h.dataset.p; h.innerHTML = "";
+    const W = Math.max(h.clientWidth, 200), H = h.clientHeight || 26, lw = 74, x0 = 2, x1 = W - lw, cy = H - 12;
+    const hi = Math.max(o.TTY, o.SQL, o.lim, o.ref2 || 0) * 1.08, X = v => x0 + v / hi * (x1 - x0);
+    const svg = el("svg", {viewBox: `0 0 ${W} ${H}`}, h);
+    el("line", {x1: x0, x2: x1, y1: cy, y2: cy, stroke: "var(--grid)"}, svg);
+    if (o.tipo === "min") el("rect", {x: x0, y: cy - 8, width: X(o.lim) - x0, height: 16, fill: "var(--bad-bg)", opacity: .6}, svg);
+    else el("rect", {x: X(o.lim), y: cy - 8, width: x1 - X(o.lim), height: 16, fill: "var(--bad-bg)", opacity: .6}, svg);
+    el("line", {x1: X(o.lim), x2: X(o.lim), y1: cy - 9, y2: cy + 9, stroke: "var(--thr)", "stroke-width": 1.5}, svg);
+    if (o.ref2) el("line", {x1: X(o.ref2), x2: X(o.ref2), y1: cy - 9, y2: cy + 9, stroke: "var(--thr)", "stroke-width": 1.5, "stroke-dasharray": "3 3"}, svg);
+    el("line", {x1: x0, x2: X(o[p]), y1: cy, y2: cy, stroke: PC[p], "stroke-width": 4, "stroke-linecap": "round"}, svg);
+    el("circle", {cx: X(o[p]), cy, r: 6, fill: PC[p], stroke: "var(--panel)", "stroke-width": 2}, svg);
+    const t = el("text", {x: W, y: cy + 4, "text-anchor": "end"}, svg); t.innerHTML = `<tspan style="fill:var(--ink);font-weight:500">${fmtN(o[p], o[p] >= 100 ? 0 : 1)}</tspan> ${o.u}`;
+    const hit = el("rect", {x: 0, y: 0, width: W, height: H, fill: "transparent"}, svg);
+    hit.addEventListener("mousemove", () => showTip(h, X(o[p]) * h.clientWidth / W, cy - 8, `<div><span class="sw" style="background:${PC[p]}"></span>${PLANTAS[p].nombre} · ${esc(o.n)}</div><div>Resultado <b>${fmtN(o[p], 1)}</b> ${o.u}</div><div>${esc(o.ref)}</div>`));
+    hit.addEventListener("mouseleave", hideTip); });
+}
+
+/* ---------- Hallazgos ---------- */
+function renderHal(){
+  const EST = {"Pendiente": "bad", "En curso": "warn", "Programado": "na", "A definir": "na", "Cerrado": "ok"};
+  $("#tabHal").innerHTML = `<thead><tr><th>Fecha</th><th class="l">Planta</th><th class="l">Tema</th><th class="l">Hallazgo</th><th class="l">Acción</th><th>Estado</th></tr></thead><tbody>` +
+    HALLAZGOS.map(h => `<tr><td class="n">${fD(D(h.f))}</td><td class="l">${h.p === "Ambas" ? "Ambas" : `<i class="mark" style="background:${PC[h.p]}"></i>${PLANTAS[h.p].nombre}`}</td><td class="l">${esc(h.tema)}</td><td class="obs">${esc(h.d)}</td><td class="obs">${esc(h.acc)}</td><td>${pill(EST[h.est] || "na", h.est)}</td></tr>`).join("") + "</tbody>";
+}
+
+/* ---------- init ---------- */
+document.querySelectorAll("#vibSeg button").forEach(b => b.addEventListener("click", () => {
+  vibP = b.dataset.p; document.querySelectorAll("#vibSeg button").forEach(x => x.setAttribute("aria-pressed", x === b)); renderVib(); }));
+function all(){ renderResumen(); renderSCADA(); renderVib(); renderAceite(); renderHal(); }
+all();
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { drawSCADA(); renderVib(); renderAceite(); }, 150); });
+
+</script>
+</body></html>
