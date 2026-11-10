@@ -546,7 +546,7 @@ function lineChart(host, o){
 /* ===== CONFIGURACIÓN DE FUENTE =====
    appsScriptUrl: URL /exec del Apps Script del Google Sheets (ver Code.gs).
    Si está vacía o falla, se usa la copia embebida (embebido.js). */
-const FUENTE = { appsScriptUrl: "" };
+const FUENTE = { appsScriptUrl: "https://script.google.com/macros/s/AKfycbyVz_8M1v2IAiw23M5WKz0SlfUboHt4EOm5_evVx2opCB6wCBaw4m0v_Im65zVBmori/exec" };
 async function cargar(){
   if (FUENTE.appsScriptUrl){ try { const r = await fetch(FUENTE.appsScriptUrl, {cache: "no-store"}); const j = await r.json();
     if (j.VIBRACIONES && j.ACEITE) return {raw: j, src: "Google Sheets · actualizado " + new Date(j.generado || Date.now()).toLocaleString("es-AR")}; } catch (e) { console.warn("Apps Script no disponible", e); } }
